@@ -8,7 +8,7 @@ Use your Android phone as a Windows microphone over **Bluetooth or Wi-Fi**. The 
 
 ## 下载与使用
 
-从 [GitHub Releases](https://github.com/FrancisRi/LinkMic/releases) 下载 Windows **0.3.3** 和 Android **0.2.3**。目前为开发预览，Android APK 使用开发签名。
+从 [最新正式 Release](https://github.com/FrancisRi/LinkMic/releases/latest) 下载 Windows **0.3.3** 和 Android **0.2.3**。Android APK 继续使用原开发签名，可覆盖安装之前同签名版本。[版本记录](CHANGELOG.md)。
 
 1. Windows：完整解压 ZIP，运行 `LinkMic.exe`，保留旁边的 `rnnoise.dll`。
 2. Android：安装 APK，允许麦克风及所用连接方式的权限；从旧版升级请覆盖安装以保留配对。
@@ -20,7 +20,7 @@ Use your Android phone as a Windows microphone over **Bluetooth or Wi-Fi**. The 
 
 普通扬声器输出用于监听。要让会议/录音软件使用手机声音，请另外安装 [VB-CABLE](https://vb-audio.com/Cable/)，LinkMic 选择 **CABLE Input**，会议软件的麦克风选择 **CABLE Output**。VB-CABLE 是独立许可的 donationware，欢迎向原作者[捐赠或购买许可](https://shop.vb-audio.com/)。无需修改 Windows 默认播放设备。
 
-首次配对请在可信网络中完成。凭据由 Windows DPAPI / Android Keystore 加密保存；Wi-Fi 音频流目前没有加密。正常使用不需要 REA、Ghidra、ADB、USB 调试或自行编译驱动。
+首次配对请在可信网络中完成。凭据由 Windows DPAPI / Android Keystore 加密保存；Wi-Fi 音频流目前没有加密。正常使用不需要 ADB、USB 调试或自行编译驱动。
 
 ## Build from source
 
@@ -46,7 +46,7 @@ Windows PowerShell commands from the repository root:
 
 Or open `android/` in Android Studio and `LinkMic.slnx` in a .NET 10-capable IDE. On Linux/macOS use `cd android && ./gradlew testDebugUnitTest lintDebug assembleDebug` after configuring the Android SDK. The first build needs internet for dependencies and RNNoise's pinned source/model.
 
-`scripts/env.ps1` respects existing `JAVA_HOME`, `ANDROID_HOME`/`ANDROID_SDK_ROOT`, `DOTNET_ROOT` and cache settings. Optional portable tools can be selected with `LINKMIC_TOOLS_ROOT`; installed tools also work. No particular checkout drive or REA workspace is required. RNNoise downloads are verified against `third-party/rnnoise/provenance.json`. The normal application does not need the WDK.
+`scripts/env.ps1` respects existing `JAVA_HOME`, `ANDROID_HOME`/`ANDROID_SDK_ROOT`, `DOTNET_ROOT` and cache settings. Optional portable tools can be selected with `LINKMIC_TOOLS_ROOT`; installed tools also work. RNNoise downloads are verified against `third-party/rnnoise/provenance.json`. The normal application does not need the WDK.
 
 Outputs are under `artifacts/`. See [release instructions](docs/RELEASING.md). Android debug signing uses your local development key. A build on another machine cannot overwrite an installation signed with a different key without uninstalling it first. Never commit signing keys.
 
