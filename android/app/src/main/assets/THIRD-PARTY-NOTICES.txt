@@ -1,0 +1,15 @@
+LinkMic Android 0.2.3
+
+This application includes Material Components for Android 1.13.0 and AndroidX
+libraries, licensed under the Apache License, Version 2.0.
+Copyright The Android Open Source Project / Google and respective contributors.
+https://github.com/material-components/material-components-android
+https://developer.android.com/jetpack/androidx
+
+It includes the Kotlin standard library and Kotlin-related runtime dependencies,
+licensed under the Apache License, Version 2.0.
+Copyright JetBrains s.r.o. and respective contributors.
+https://github.com/JetBrains/kotlin
+
+The full Apache 2.0 license is provided in Apache-2.0.txt alongside this notice.
+Robolectric and JUnit are development-only test tools, not included in the APK.

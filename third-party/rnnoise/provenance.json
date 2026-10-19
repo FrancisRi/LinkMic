@@ -1,0 +1,22 @@
+{
+  "name": "RNNoise",
+  "version": "v0.2",
+  "commit": "904a876dce1f9ab8860c0a5000ed151f9f6eef58",
+  "sourceUrl": "https://codeload.github.com/xiph/rnnoise/zip/904a876dce1f9ab8860c0a5000ed151f9f6eef58",
+  "sourceArchiveSha256": "61339f4f2eab6d2dcce1ec6ff7afe7d63215b4f51acf0a0b6d51615c75db1e15",
+  "modelVersion": "0b50c45",
+  "modelUrl": "https://media.xiph.org/rnnoise/models/rnnoise_data-0b50c45.tar.gz",
+  "modelArchiveSha256": "4ac81c5c0884ec4bd5907026aaae16209b7b76cd9d7f71af582094a2f98f4b43",
+  "dllSha256": "50785868936359dc9cbb002a646802a3bfa7429bf66bd101a0c8f8c6e992bd74",
+  "target": "Windows x64 SSE2",
+  "compiler": "MSVC 14.44.35207",
+  "runtime": "static CRT /MT; KERNEL32.dll only",
+  "sourceModified": false,
+  "upstreamWarningExemptions": [
+    "C4244 double/float conversion",
+    "C4305 model float constants"
+  ],
+  "buildScript": "scripts/build-rnnoise.ps1",
+  "modelEmbedded": true,
+  "license": "upstream BSD-style COPYING; LICENSE.txt"
+}

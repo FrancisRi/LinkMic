@@ -1,0 +1,6 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+  <!-- Separate from the notification glyph: allow breathing room inside launcher masks. -->
+  <group android:scaleX="1.8" android:scaleY="1.8" android:translateX="10.8" android:translateY="10.8">
+    <path android:fillColor="#FFFFFF" android:pathData="M24,10a5,5 0,0 1,5 5v9a5,5 0,0 1,-10 0v-9a5,5 0,0 1,5 -5M15,23h2v1a7,7 0,0 0,14 0v-1h2v1a9,9 0,0 1,-8 8.94v3.06h5v2h-12v-2h5v-3.06a9,9 0,0 1,-8 -8.94z"/>
+  </group>
+</vector>

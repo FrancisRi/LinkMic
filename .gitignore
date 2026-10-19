@@ -1,0 +1,41 @@
+**/bin/
+**/obj/
+**/build/
+**/.gradle/
+.dotnet-home/
+.nuget/
+.android/
+.tools/
+artifacts/
+android/local.properties
+.idea/
+.vs/
+*.user
+*.log
+*.wav
+# Signing keys, credentials and real user state
+.env
+.env.*
+*.pfx
+*.p12
+*.pem
+*.key
+*.keystore
+*.jks
+**/.test-signing/
+**/paired-devices.dat*
+**/paired-computers.enc*
+**/audio-settings.json
+# Generated native libraries, downloaded sources and vendor binaries
+native/win-x64/
+third-party/rnnoise/source/
+third-party/rnnoise/*.zip
+third-party/rnnoise/*.tar.gz
+third-party/vb-cable/original/
+third-party/vb-cable/*.zip
+drivers/out/
+# Local research and machine-specific maintenance records
+docs/driver-analysis/
+docs/mcp-*.json
+scripts/check-mcp.mjs
+docs/REMOTE-DRIVER-TEST.md

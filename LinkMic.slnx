@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="src/LinkMic.Core/LinkMic.Core.csproj" />
+  <Project Path="src/LinkMic.Windows/LinkMic.Windows.csproj" />
+  <Project Path="tests/LinkMic.Tests/LinkMic.Tests.csproj" />
+  <Project Path="tests/DisconnectProbe/DisconnectProbe.csproj" />
+</Solution>

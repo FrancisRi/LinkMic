@@ -1,0 +1,460 @@
+--- a/Filters/micarraywavtable.h
++++ b/Filters/micarraywavtable.h
+@@ -18,9 +18,9 @@
+ //
+ // Mic array range.
+ //
+-#define MICARRAY_RAW_CHANNELS                   2       // Channels for raw mode
+-#define MICARRAY_DEVICE_MAX_CHANNELS            2       // Max channels overall
+-#define MICARRAY_32_BITS_PER_SAMPLE_PCM         32      // 32 Bits Per Sample
++#define MICARRAY_RAW_CHANNELS                   1       // Channels for raw mode
++#define MICARRAY_DEVICE_MAX_CHANNELS            1       // Max channels overall
++#define MICARRAY_32_BITS_PER_SAMPLE_PCM         16      // 32 Bits Per Sample
+ #define MICARRAY_RAW_SAMPLE_RATE                48000   // Raw sample rate
+ 
+ //
+@@ -32,7 +32,7 @@
+ static
+ KSDATAFORMAT_WAVEFORMATEXTENSIBLE MicArrayPinSupportedDeviceFormats[] =
+ {
+-    // 48 KHz 32-bit 2 channels
++    // LinkMic: 48 KHz signed PCM16 mono, no format conversion in kernel.
+     {
+         {
+             sizeof(KSDATAFORMAT_WAVEFORMATEXTENSIBLE),
+@@ -46,15 +46,15 @@
+         {
+             {
+                 WAVE_FORMAT_EXTENSIBLE,
++                1,
++                48000,
++                96000,
+                 2,
+-                48000,
+-                384000,
+-                8,
+-                32,
++                16,
+                 sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX)
+             },
+-            32,
+-            KSAUDIO_SPEAKER_STEREO,
++            16,
++            KSAUDIO_SPEAKER_MONO,
+             STATICGUIDOF(KSDATAFORMAT_SUBTYPE_PCM)
+         }
+     }
+@@ -66,6 +66,10 @@
+ static
+ MODE_AND_DEFAULT_FORMAT MicArrayPinSupportedDeviceModes[] =
+ {
++    {
++        STATIC_AUDIO_SIGNALPROCESSINGMODE_DEFAULT,
++        &MicArrayPinSupportedDeviceFormats[0].DataFormat
++    },
+     {
+         STATIC_AUDIO_SIGNALPROCESSINGMODE_RAW,
+         &MicArrayPinSupportedDeviceFormats[0].DataFormat
+--- a/Filters/minipairs.h
++++ b/Filters/minipairs.h
+@@ -153,7 +153,8 @@
+     &SpeakerMiniports,
+ };
+ 
+-#define g_cRenderEndpoints  (SIZEOF_ARRAY(g_RenderEndpoints))
++// LinkMic exposes a capture endpoint only. Speaker descriptors are not registered.
++#define g_cRenderEndpoints 0u
+ 
+ //=============================================================================
+ //
+--- a/Main/adapter.cpp
++++ b/Main/adapter.cpp
+@@ -22,6 +22,7 @@
+ #include "definitions.h"
+ #include "endpoints.h"
+ #include "minipairs.h"
++#include "LinkMicControl.h"
+ 
+ typedef void (*fnPcDriverUnload) (PDRIVER_OBJECT);
+ fnPcDriverUnload gPCDriverUnloadRoutine = NULL;
+@@ -51,6 +52,8 @@
+ DWORD g_DoNotCreateDataFiles = 1;  // default is off.
+ DWORD g_DisableToneGenerator = 0;  // default is to generate tones.
+ UNICODE_STRING g_RegistryPath;      // This is used to store the registry settings path for the driver
++// One fixed-name injection device is paired with exactly one root audio adapter.
++static LONG g_LinkMicAdapterAdded = 0;
+ 
+ //-----------------------------------------------------------------------------
+ // Functions
+@@ -97,6 +100,7 @@
+ 
+     DPF(D_TERSE, ("[DriverUnload]"));
+ 
++    LinkMicControlShutdown();
+     ReleaseRegistryStringBuffer();
+ 
+     if (DriverObject == NULL)
+@@ -346,15 +350,15 @@
+     gPCDriverUnloadRoutine = DriverObject->DriverUnload;
+     DriverObject->DriverUnload = DriverUnload;
+ 
+-    //
+-    // All done.
+-    //
+-    ntStatus = STATUS_SUCCESS;
++    // LinkMic own injection device is installed after PortCls dispatch setup.
++    ntStatus = LinkMicControlInitialize(DriverObject);
++    if (!NT_SUCCESS(ntStatus)) goto Done;
+     
+ Done:
+ 
+     if (!NT_SUCCESS(ntStatus))
+     {
++        LinkMicControlShutdown();
+         if (WdfGetDriver() != NULL)
+         {
+             WdfDriverMiniportUnload(WdfGetDriver());
+@@ -411,6 +415,9 @@
+ 
+     DPF(D_TERSE, ("[AddDevice]"));
+ 
++    if (InterlockedCompareExchange(&g_LinkMicAdapterAdded, 1, 0) != 0)
++        return STATUS_DEVICE_CONFIGURATION_ERROR;
++
+     maxObjects = g_MaxMiniports;
+ 
+     // Tell the class driver to add the device.
+@@ -424,6 +431,8 @@
+             maxObjects,
+             0
+         );
++
++    if (!NT_SUCCESS(ntStatus)) LinkMicControlShutdown();
+ 
+     return ntStatus;
+ } // AddDevice
+@@ -767,6 +776,8 @@
+     // Release the adapter IUnknown interface.
+     //
+     SAFE_RELEASE(pUnknownCommon);
++
++    LinkMicControlSetReady(NT_SUCCESS(ntStatus));
+     
+     return ntStatus;
+ } // StartDevice
+@@ -821,6 +832,9 @@
+     case IRP_MN_REMOVE_DEVICE:
+     case IRP_MN_SURPRISE_REMOVAL:
+     case IRP_MN_STOP_DEVICE:
++        LinkMicControlSetReady(false);
++        if (stack->MinorFunction != IRP_MN_STOP_DEVICE)
++            LinkMicControlShutdown();
+         ext = static_cast<PortClassDeviceContext*>(_DeviceObject->DeviceExtension);
+ 
+         if (ext->m_pCommon != NULL)
+--- a/Main/minwavert.cpp
++++ b/Main/minwavert.cpp
+@@ -14,6 +14,7 @@
+ #pragma warning (disable : 4127)
+ 
+ #include "definitions.h"
++#include "LinkMicFormat.h"
+ #include <limits.h>
+ #include "endpoints.h"
+ #include "minwavert.h"
+@@ -1094,6 +1095,9 @@
+ 
+     UNREFERENCED_PARAMETER(_bCapture);
+ 
++    if (_pDataFormat == NULL || !LinkMicValidateFormat(reinterpret_cast<const unsigned char*>(_pDataFormat), _pDataFormat->FormatSize))
++        return STATUS_INVALID_PARAMETER;
++
+     if (_ulPin >= m_pMiniportPair->WaveDescriptor->PinCount)
+     {
+         return STATUS_INVALID_PARAMETER;
+@@ -1108,7 +1112,7 @@
+         if (!IsEqualGUIDAligned(pFormat->DataFormat.MajorFormat, _pDataFormat->MajorFormat)) { continue; }
+         if (!IsEqualGUIDAligned(pFormat->DataFormat.SubFormat, _pDataFormat->SubFormat)) { continue; }
+         if (!IsEqualGUIDAligned(pFormat->DataFormat.Specifier, _pDataFormat->Specifier)) { continue; }
+-        if (pFormat->DataFormat.FormatSize < sizeof(KSDATAFORMAT_WAVEFORMATEX)) { continue; }
++        if (_pDataFormat->FormatSize < sizeof(KSDATAFORMAT) + sizeof(WAVEFORMATEX)) { continue; }
+ 
+         // WAVEFORMATEX VALIDATION
+         PWAVEFORMATEX pWaveFormat = reinterpret_cast<PWAVEFORMATEX>(_pDataFormat + 1);
+@@ -1119,16 +1123,19 @@
+         }
+         if (pWaveFormat->nChannels  != pFormat->WaveFormatExt.Format.nChannels) { continue; }
+         if (pWaveFormat->nSamplesPerSec != pFormat->WaveFormatExt.Format.nSamplesPerSec) { continue; }
++        if (pWaveFormat->nAvgBytesPerSec != pFormat->WaveFormatExt.Format.nAvgBytesPerSec) { continue; }
+         if (pWaveFormat->nBlockAlign != pFormat->WaveFormatExt.Format.nBlockAlign) { continue; }
+         if (pWaveFormat->wBitsPerSample != pFormat->WaveFormatExt.Format.wBitsPerSample) { continue; }
+         if (pWaveFormat->wFormatTag != WAVE_FORMAT_EXTENSIBLE)
+         {
++            if (pWaveFormat->cbSize != 0) { continue; }
+             ntStatus = STATUS_SUCCESS;
+             break;
+         }
+ 
+         // WAVEFORMATEXTENSIBLE VALIDATION
+-        if (pWaveFormat->cbSize < sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX)) { continue; }
++        if (pWaveFormat->cbSize != sizeof(WAVEFORMATEXTENSIBLE) - sizeof(WAVEFORMATEX) ||
++            _pDataFormat->FormatSize < sizeof(KSDATAFORMAT_WAVEFORMATEXTENSIBLE)) { continue; }
+ 
+         PWAVEFORMATEXTENSIBLE pWaveFormatExt = reinterpret_cast<PWAVEFORMATEXTENSIBLE>(pWaveFormat);
+         if (pWaveFormatExt->Samples.wValidBitsPerSample != pFormat->WaveFormatExt.Samples.wValidBitsPerSample) { continue; }
+@@ -1220,6 +1227,8 @@
+     else if (PropertyRequest->Verb & KSPROPERTY_TYPE_SET)
+     {
+         pKsFormat = (PKSDATAFORMAT)PropertyRequest->Value;
++        if (!LinkMicValidateFormat(reinterpret_cast<const unsigned char*>(pKsFormat), PropertyRequest->ValueSize))
++            return STATUS_INVALID_PARAMETER;
+         ntStatus = IsFormatSupported(kspPin->PinId, IsSystemCapturePin(kspPin->PinId) || FALSE, pKsFormat);
+         if (!NT_SUCCESS(ntStatus))
+         {
+--- a/Main/minwavertstream.cpp
++++ b/Main/minwavertstream.cpp
+@@ -4,6 +4,8 @@
+ #include "endpoints.h"
+ #include "minwavert.h"
+ #include "minwavertstream.h"
++#include "LinkMicControl.h"
++#include "LinkMicFormat.h"
+ #define MINWAVERTSTREAM_POOLTAG 'SRWM'
+ 
+ #pragma warning (disable : 4127)
+@@ -33,6 +35,14 @@
+ --*/
+ {
+     PAGED_CODE();
++    // Stop and wait for callbacks before releasing anything they may reference.
++    if (m_pNotificationTimer)
++    {
++        ExDeleteTimer(m_pNotificationTimer, TRUE, TRUE, NULL);
++        m_pNotificationTimer = NULL;
++    }
++    KeFlushQueuedDpcs();
++
+     if (NULL != m_pMiniport)
+     {
+     
+@@ -81,22 +91,6 @@
+         ExFreePoolWithTag( m_pWfExt, MINWAVERTSTREAM_POOLTAG );
+         m_pWfExt = NULL;
+     }
+-    if (m_pNotificationTimer)
+-    {
+-        ExDeleteTimer
+-        (
+-            m_pNotificationTimer, 
+-            TRUE, // Cancel the timer if it is currently set.
+-            TRUE, // Wait for the timer to finish expiring and for any callback to a ExTimerCallback routine to finish.
+-            NULL
+-         );
+-    }
+-
+-    // Since we just cancelled the notification timer, wait for all queued 
+-    // DPCs to complete before we free the notification DPC.
+-    //
+-    KeFlushQueuedDpcs();
+-
+     DPF_ENTER(("[CMiniportWaveRTStream::~CMiniportWaveRTStream]"));
+ } // ~CMiniportWaveRTStream
+ 
+@@ -250,12 +244,22 @@
+         return STATUS_INSUFFICIENT_RESOURCES;
+     }
+ 
++    if (DataFormat_ == NULL || !LinkMicValidateFormat(reinterpret_cast<const unsigned char*>(DataFormat_), DataFormat_->FormatSize))
++        return STATUS_INVALID_PARAMETER;
+     pWfEx = GetWaveFormatEx(DataFormat_);
+     if (NULL == pWfEx) 
+     { 
+         return STATUS_UNSUCCESSFUL; 
+     }
+ 
++    // Revalidate at the allocation boundary; never trust an unchecked cbSize.
++    if (pWfEx->nChannels != 1 || pWfEx->nSamplesPerSec != 48000 ||
++        pWfEx->wBitsPerSample != 16 || pWfEx->nBlockAlign != 2 || pWfEx->nAvgBytesPerSec != 96000 ||
++        !((pWfEx->wFormatTag == WAVE_FORMAT_PCM && pWfEx->cbSize == 0) ||
++          (pWfEx->wFormatTag == WAVE_FORMAT_EXTENSIBLE && pWfEx->cbSize == 22 &&
++           DataFormat_->FormatSize >= sizeof(KSDATAFORMAT_WAVEFORMATEXTENSIBLE))))
++        return STATUS_INVALID_PARAMETER;
++
+     m_pMiniport = reinterpret_cast<CMiniportWaveRT*>(Miniport_);
+     if (m_pMiniport == NULL)
+     {
+@@ -303,57 +307,10 @@
+ 
+     if (m_bCapture)
+     {
+-        ReadRegistrySettings();
+-        DWORD toneFrequency = 0;
+-        DWORD toneAmplitude = 0;
+-        DWORD toneDCOffset = 0;
+-        DWORD toneInitialPhase = 0;
+-
+-        double toneAmplitudeDouble = 0;
+-        double toneDCOffsetDouble = 0;
+-        double toneInitialPhaseDouble = 0;
+-
+-        toneFrequency = m_ulHostCaptureToneFrequency;
+-        toneAmplitude = m_dwHostCaptureToneAmplitude;
+-        toneDCOffset = m_dwHostCaptureToneDCOffset;
+-        toneInitialPhase = m_dwHostCaptureToneInitialPhase;
+-
+-        if (labs(toneAmplitude) > 100)
+-        {
+-            toneAmplitude = toneAmplitude > 0 ? 100 : -100;
+-        }
+-
+-        if (labs(toneDCOffset) > 100)
+-        {
+-            toneDCOffset = toneDCOffset > 0 ? 100 : -100;
+-        }
+-
+-        DWORD abssum = labs(toneAmplitude) + labs(toneDCOffset);
+-
+-        if (abssum > 100)
+-        {
+-            toneAmplitudeDouble = ((double)toneAmplitude) / abssum;
+-            toneDCOffsetDouble = ((double)toneDCOffset) / abssum;
+-        }
+-        else
+-        {
+-            toneAmplitudeDouble = ((double)toneAmplitude) / 100.0;
+-            toneDCOffsetDouble = ((double)toneDCOffset) / 100.0;
+-        }
+-
+-        if (labs(toneInitialPhase) > 31416)
+-        {
+-            toneInitialPhase = toneInitialPhase > 0 ? 31416 : -31416;
+-        }
+-
+-        toneInitialPhaseDouble = (double)toneInitialPhase / 10000;
+-
+-        ntStatus = m_ToneGenerator.Init(toneFrequency, toneAmplitudeDouble, toneDCOffsetDouble, toneInitialPhaseDouble, m_pWfExt);
+-
+-        if (!NT_SUCCESS(ntStatus))
+-        {
+-            return ntStatus;
+-        }
++        // Original sample sine-tone generator is intentionally not initialized.
++        // LinkMicReadCapture supplies actual phone PCM or silence on underrun.
++        if (pWfEx->nSamplesPerSec != 48000 || pWfEx->nChannels != 1 || pWfEx->wBitsPerSample != 16)
++            return STATUS_NOT_SUPPORTED;
+     }
+     else if (!g_DoNotCreateDataFiles)
+     {
+@@ -476,12 +433,16 @@
+         return STATUS_UNSUCCESSFUL; 
+     }
+     
+-    if ((NotificationCount_ == 0) || (RequestedSize_ % NotificationCount_ != 0))
+-    {
++    RequestedSize_ -= RequestedSize_ % (m_pWfExt->Format.nBlockAlign);
++
++    // Validate the aligned size, including complete PCM samples per packet.
++    if (RequestedSize_ > 96000 || NotificationCount_ == 0 ||
++        RequestedSize_ % NotificationCount_ != 0 ||
++        (RequestedSize_ / NotificationCount_) % m_pWfExt->Format.nBlockAlign != 0)
+         return STATUS_INVALID_PARAMETER;
+-    }
+-
+-    RequestedSize_ -= RequestedSize_ % (m_pWfExt->Format.nBlockAlign);
++    ulBufferDurationMs = (ULONG)(((ULONGLONG)RequestedSize_ * 1000) / m_ulDmaMovementRate);
++    if (ulBufferDurationMs / NotificationCount_ == 0)
++        return STATUS_INVALID_PARAMETER;
+     
+     if (!m_bCapture && (!g_DoNotCreateDataFiles))
+     {
+@@ -523,9 +484,13 @@
+     //  A WaveRT miniport driver should not require software access to the audio buffer itself."
+     //   
+     m_pDmaBuffer = (BYTE*)m_pPortStream->MapAllocatedPages(pBufferMdl, MmCached);
++    if (m_pDmaBuffer == NULL)
++    {
++        m_pPortStream->FreePagesFromMdl(pBufferMdl);
++        return STATUS_INSUFFICIENT_RESOURCES;
++    }
+     m_ulNotificationsPerBuffer = NotificationCount_;
+     m_ulDmaBufferSize = RequestedSize_;
+-    ulBufferDurationMs = (RequestedSize_ * 1000) / m_ulDmaMovementRate;
+     m_ulNotificationIntervalMs = ulBufferDurationMs / NotificationCount_;
+ 
+     *AudioBufferMdl_ = pBufferMdl;
+@@ -759,6 +724,12 @@
+     //  A WaveRT miniport driver should not require software access to the audio buffer itself."
+     //   
+     m_pDmaBuffer = (BYTE*)m_pPortStream->MapAllocatedPages(pBufferMdl, MmCached);
++
++    if (m_pDmaBuffer == NULL)
++    {
++        m_pPortStream->FreePagesFromMdl(pBufferMdl);
++        return STATUS_INSUFFICIENT_RESOURCES;
++    }
+ 
+     m_ulDmaBufferSize = RequestedSize_;
+     m_ulNotificationsPerBuffer = 0;
+@@ -1312,7 +1283,7 @@
+     // may cause us to lose some of the time, so we will carry the remainder forward 
+     // to the next GetPosition() call.
+     //
+-    ULONG TimeElapsedInMS = (ULONG)(hnsCurrentTime - m_ullDmaTimeStamp + m_hnsElapsedTimeCarryForward)/10000;
++    ULONGLONG TimeElapsedInMS = (ULONGLONG)(hnsCurrentTime - m_ullDmaTimeStamp + m_hnsElapsedTimeCarryForward) / 10000;
+     
+     // Carry forward the remainder of this division so we don't fall behind with our position too much.
+     //
+@@ -1324,15 +1295,16 @@
+     //
+     // need to divide by 1000 because m_ulDmaMovementRate is average bytes per sec.
+ 
+-    ULONG ByteDisplacement = ((m_ulDmaMovementRate * TimeElapsedInMS) + m_byteDisplacementCarryForward) / 1000 ;
+-    m_byteDisplacementCarryForward = ((m_ulDmaMovementRate * TimeElapsedInMS) + m_byteDisplacementCarryForward) % 1000;
++    ULONGLONG byteNumerator = ((ULONGLONG)m_ulDmaMovementRate * TimeElapsedInMS) + m_byteDisplacementCarryForward;
++    ULONG ByteDisplacement = (ULONG)min(byteNumerator / 1000, (ULONGLONG)(MAXULONG & ~1u));
++    m_byteDisplacementCarryForward = (ULONG)(byteNumerator % 1000);
+ 
+     // Increment presentation position even after last buffer is rendered.
+     m_ullPresentationPosition += ByteDisplacement;
+ 
+     if (m_bCapture)
+     {
+-        // Write sine wave to buffer.
++        // Write actual phone PCM (or underrun silence) to the capture buffer.
+         WriteBytes(ByteDisplacement);
+     }
+     else
+@@ -1397,7 +1369,7 @@
+ 
+ Routine Description:
+ 
+-This function writes the audio buffer using a sine wave generator
++This function writes phone PCM into the WaveRT capture DMA buffer.
+ 
+ Arguments:
+ 
+@@ -1406,6 +1378,15 @@
+ --*/
+ {
+     ULONG bufferOffset = m_ullLinearPosition % m_ulDmaBufferSize;
++
++    // A delayed timer can advance past multiple DMA laps. Only the newest lap is
++    // observable to the capture client; keep DPC work bounded to one buffer.
++    if (ByteDisplacement > m_ulDmaBufferSize)
++    {
++        ULONG skippedBytes = ByteDisplacement - m_ulDmaBufferSize;
++        bufferOffset = (bufferOffset + skippedBytes) % m_ulDmaBufferSize;
++        ByteDisplacement = m_ulDmaBufferSize;
++    }
+ 
+     // Normally this will loop no more than once for a single wrap, but if
+     // many bytes have been displaced then this may loops many times.
+@@ -1413,7 +1394,7 @@
+     {
+         ULONG runWrite = min(ByteDisplacement, m_ulDmaBufferSize - bufferOffset);
+         
+-        m_ToneGenerator.GenerateSine(m_pDmaBuffer + bufferOffset, runWrite);
++        LinkMicReadCapture(m_pDmaBuffer + bufferOffset, runWrite);
+            	
+         bufferOffset = (bufferOffset + runWrite) % m_ulDmaBufferSize;
+         ByteDisplacement -= runWrite;

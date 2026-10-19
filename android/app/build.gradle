@@ -1,0 +1,15 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'dev.linkmic.app'
+    compileSdk 35
+    defaultConfig { applicationId 'dev.linkmic.app'; minSdk 26; targetSdk 35; versionCode 5; versionName '0.2.3' }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    buildTypes { release { minifyEnabled false } }
+    bundle { language { enableSplit = false } }
+    testOptions { unitTests.includeAndroidResources = true; unitTests.all { systemProperty 'linkmic.artifacts', file('../../artifacts/tests').absolutePath; doFirst { file('../../artifacts/tests').mkdirs() } } }
+}
+dependencies {
+    implementation 'com.google.android.material:material:1.13.0'
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.14.1'
+}

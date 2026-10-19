@@ -1,0 +1,10 @@
+* text=auto eol=lf
+*.sh text eol=lf
+gradlew text eol=lf
+*.bat text eol=crlf
+*.png binary
+*.ico binary
+*.jar binary
+# Keep vendor evidence byte-for-byte; sample formatting is upstream's.
+drivers/vendor/windows-driver-samples/** -text
+drivers/** -whitespace

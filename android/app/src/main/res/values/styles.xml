@@ -1,0 +1,19 @@
+<resources>
+  <style name="Base.AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
+    <item name="colorPrimary">@color/md_primary</item><item name="colorOnPrimary">@color/md_on_primary</item>
+    <item name="colorPrimaryContainer">@color/md_primary_container</item><item name="colorOnPrimaryContainer">@color/md_on_primary_container</item>
+    <item name="colorSecondary">@color/md_secondary</item><item name="colorSurface">@color/md_surface</item><item name="colorOnSurface">@color/md_on_surface</item>
+    <item name="colorSecondaryContainer">@color/md_secondary_container</item><item name="colorOnSecondaryContainer">@color/md_on_secondary_container</item><item name="colorOutlineVariant">@color/md_outline_variant</item>
+    <item name="colorSurfaceVariant">@color/md_surface_variant</item><item name="colorOnSurfaceVariant">@color/md_on_surface_variant</item><item name="colorOutline">@color/md_outline</item>
+    <item name="colorSurfaceContainerLowest">@color/md_card</item>
+    <item name="colorSurfaceContainerHigh">@color/md_dialog</item>
+    <item name="android:windowBackground">@null</item><item name="android:statusBarColor">@android:color/transparent</item><item name="android:navigationBarColor">@android:color/transparent</item>
+  </style>
+  <style name="AppTheme" parent="Base.AppTheme"><item name="android:windowLightStatusBar">true</item><item name="android:windowBackground">@null</item></style>
+  <style name="LinkMic.ToolbarTitle" parent="TextAppearance.Material3.TitleLarge"><item name="android:textSize">20sp</item><item name="android:fontFamily">sans-serif-medium</item></style>
+  <style name="LinkMic.ToolbarSubtitle" parent="TextAppearance.Material3.BodySmall"><item name="android:textSize">12sp</item></style>
+  <style name="LinkMic.SectionTitle" parent="TextAppearance.Material3.TitleSmall"><item name="android:fontFamily">sans-serif-medium</item><item name="android:textColor">?attr/colorOnSurface</item></style>
+  <style name="LinkMic.SurfaceCard" parent="Widget.Material3.CardView.Filled"><item name="cardBackgroundColor">?attr/colorSurfaceContainerLowest</item><item name="cardCornerRadius">24dp</item><item name="cardElevation">0dp</item><item name="strokeWidth">1dp</item><item name="strokeColor">?attr/colorOutlineVariant</item></style>
+  <style name="LinkMic.ModeButton" parent="Widget.Material3.Button.OutlinedButton"><item name="android:minHeight">52dp</item><item name="android:paddingStart">12dp</item><item name="android:paddingEnd">12dp</item><item name="android:insetTop">2dp</item><item name="android:insetBottom">2dp</item><item name="cornerRadius">14dp</item><item name="strokeColor">?attr/colorOutlineVariant</item><item name="iconSize">18dp</item><item name="iconPadding">8dp</item><item name="iconGravity">textStart</item><item name="android:fontFamily">sans-serif-medium</item></style>
+  <style name="LinkMic.Input" parent="Widget.Material3.TextInputLayout.OutlinedBox"><item name="boxCornerRadiusTopStart">12dp</item><item name="boxCornerRadiusTopEnd">12dp</item><item name="boxCornerRadiusBottomStart">12dp</item><item name="boxCornerRadiusBottomEnd">12dp</item></style>
+</resources>

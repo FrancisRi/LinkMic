@@ -1,0 +1,5 @@
+<resources>
+  <color name="md_dialog">#EAF1ED</color>
+  <color name="md_primary">#006A60</color><color name="md_on_primary">#FFFFFF</color><color name="md_primary_container">#C4EDE4</color><color name="md_on_primary_container">#103E37</color>
+  <color name="md_secondary">#4A635C</color><color name="md_secondary_container">#D5E8E1</color><color name="md_on_secondary_container">#16352E</color><color name="md_outline_variant">#DEE5E1</color><color name="md_surface">#F4F7F5</color><color name="md_card">#FFFFFF</color><color name="md_on_surface">#19211E</color><color name="md_surface_variant">#DFE7E2</color><color name="md_on_surface_variant">#4F5E57</color><color name="md_outline">#77877E</color><color name="icon_background">#0B635B</color>
+</resources>

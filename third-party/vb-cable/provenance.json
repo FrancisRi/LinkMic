@@ -1,0 +1,39 @@
+{
+  "product": "VB-CABLE",
+  "package": "VBCABLE_Driver_Pack45.zip",
+  "driverVersion": "3.3.1.7",
+  "source": "https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack45.zip",
+  "productPage": "https://vb-audio.com/Cable/",
+  "licensing": "https://vb-audio.com/Services/licensing.htm",
+  "archiveSha256": "b950e39f01af1d04ea623c8f6d8eb9b6ea5c477c637295fabf20631c85116bfb",
+  "archiveBytes": 1318877,
+  "catalogSigner": "CN=Microsoft Windows Hardware Compatibility Publisher, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+  "catalogThumbprint": "9A4A6CFEE73C6B65945FCAA083DFBCC1E9077E7E",
+  "kernelPolicyAndMembershipVerified": true,
+  "setupAuthenticodeVerified": true,
+  "driverInstalled": false,
+  "hardwareAudioTested": false,
+  "distribution": "Unmodified original ZIP, separately installed by the end user; original donationware attribution and license retained",
+  "files": [
+    {
+      "name": "vbaudio_cable64_win10.sys",
+      "sha256": "f01344602472f1b527de5ee98f18987c03db48fea444e457d061e937f1d531d5"
+    },
+    {
+      "name": "vbMmeCable64_win10.inf",
+      "sha256": "61c857be74831cc299d9be62f8d49d137f14063454fc54f859d5bc9b4b813daf"
+    },
+    {
+      "name": "vbaudio_cable64_win10.cat",
+      "sha256": "0a921ebadbe39cf3fa7c14ff37d1ca22565a9651244bd3ac177dc810bc99072e"
+    },
+    {
+      "name": "VBCABLE_Setup_x64.exe",
+      "sha256": "734c35dfa6d98f48782a451633ceb471166ec70d60482fd89a1123d0ee3c4f41"
+    },
+    {
+      "name": "readme.txt",
+      "sha256": "f865f3e78e37006d48e56c93f51eff4ca79acda9969854400d79bfa3db38a8d5"
+    }
+  ]
+}
