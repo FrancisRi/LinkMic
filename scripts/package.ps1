@@ -14,11 +14,11 @@ Copy-Item -LiteralPath "$ProjectRoot\docs\licenses\Apache-2.0.txt" -Destination 
 Copy-Item -LiteralPath "$ProjectRoot\third-party\rnnoise\LICENSE.txt" -Destination "$licenses\RNNoise-LICENSE.txt"
 Copy-Item -LiteralPath "$ProjectRoot\third-party\rnnoise\provenance.json" -Destination "$licenses\RNNoise-provenance.json"
 Copy-Item -LiteralPath "$ProjectRoot\LICENSE" -Destination "$windows\LICENSE.txt"
-Copy-Item -LiteralPath "$ProjectRoot\README.md","$ProjectRoot\THIRD-PARTY-NOTICES.md" -Destination $windows
+Copy-Item -LiteralPath "$ProjectRoot\README.md","$ProjectRoot\README.en.md","$ProjectRoot\THIRD-PARTY-NOTICES.md" -Destination $windows
 $docs=Join-Path $windows 'docs'
 New-Item -ItemType Directory -Force -Path $docs | Out-Null
 Copy-Item -LiteralPath "$ProjectRoot\docs\PROTOCOL.md","$ProjectRoot\docs\SIGNED-AUDIO-DRIVER.md","$ProjectRoot\docs\RNNOISE.md","$ProjectRoot\docs\PAIRED-DEVICES.md","$ProjectRoot\docs\ANDROID-0.2.3.md" -Destination $docs
-$files=@("$windows\LinkMic.exe","$windows\rnnoise.dll","$windows\LICENSE.txt","$windows\README.md","$windows\THIRD-PARTY-NOTICES.md",$licenses,$docs)
+$files=@("$windows\LinkMic.exe","$windows\rnnoise.dll","$windows\LICENSE.txt","$windows\README.md","$windows\README.en.md","$windows\THIRD-PARTY-NOTICES.md",$licenses,$docs)
 $vendorZip=Join-Path $ProjectRoot 'third-party\vb-cable\VBCABLE_Driver_Pack45.zip'
 if(Test-Path -LiteralPath $vendorZip){
     $provenance=Get-Content "$ProjectRoot\third-party\vb-cable\provenance.json" -Raw | ConvertFrom-Json

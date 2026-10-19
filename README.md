@@ -2,6 +2,8 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
+简体中文 | [English](README.en.md)
+
 把 Android 手机变成 Windows 电脑的麦克风，支持 **蓝牙和 Wi-Fi**。电脑端采用 Fluent 2 与原生 Windows 窗口，安卓端使用 Material 3。
 
 Use your Android phone as a Windows microphone over **Bluetooth or Wi-Fi**. The desktop app uses Fluent 2/native Windows windows; Android uses Material 3 and follows the first system language: Chinese for Chinese, English otherwise.
