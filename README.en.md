@@ -92,4 +92,4 @@ Third-party components retain their own licenses:
 - The experimental driver based on Microsoft's sample uses [MS-PL](drivers/LICENSE).
 - VB-CABLE is proprietary donationware and is not covered by MIT.
 
-See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). No WO Mic binary or decompiled code is included.
+See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). 
