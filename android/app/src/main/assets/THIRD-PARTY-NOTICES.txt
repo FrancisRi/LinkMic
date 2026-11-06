@@ -1,4 +1,4 @@
-LinkMic Android 0.2.3
+LinkMic Android 0.2.4
 
 This application includes Material Components for Android 1.13.0 and AndroidX
 libraries, licensed under the Apache License, Version 2.0.

@@ -12,5 +12,5 @@ if ($Target -in 'All','Android') {
     "sdk.dir=$sdkPath" | Set-Content -LiteralPath "$ProjectRoot\android\local.properties" -Encoding ascii
     Push-Location "$ProjectRoot\android"
     try { & $Gradle --no-daemon lintDebug assembleDebug; if ($LASTEXITCODE -ne 0) { throw 'Android build or lint failed' } } finally { Pop-Location }
-    Copy-Item -LiteralPath "$ProjectRoot\android\app\build\outputs\apk\debug\app-debug.apk" -Destination "$artifacts\LinkMic-Android-0.2.3-debug.apk"
+    Copy-Item -LiteralPath "$ProjectRoot\android\app\build\outputs\apk\debug\app-debug.apk" -Destination "$artifacts\LinkMic-Android-0.2.4-debug.apk"
 }

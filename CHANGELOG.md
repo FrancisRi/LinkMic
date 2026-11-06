@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.3.4 — 2026-11-06
+
+Windows **0.3.4**, Android **0.2.4**.
+
+- Disconnecting an established session from either app now shows **Disconnected** on the other app. Both updated apps exchange an explicit disconnect signal.
+- Unexpected link loss, receive timeouts, and truncated audio remain distinguishable from an intentional disconnect. Pairing and the audio frame format are unchanged.
+- The Android APK retains its signing certificate so it can update existing installations without clearing paired computers.
+
 ## v0.3.3 — 2026-10-19
 
 First regular GitHub Release, promoted from the verified public preview. Windows **0.3.3**, Android **0.2.3**. Original application code is MIT-licensed; third-party licenses remain unchanged.

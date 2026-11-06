@@ -3,6 +3,7 @@ using System.Buffers.Binary;
 namespace LinkMic.Core;
 
 public sealed record AudioFrame(uint Sequence, ulong TimestampMicros, uint Session, short[] Samples);
+public enum SessionControl { EndOfStream = -1, Audio = 0, Ready = 1, Disconnect = 2 }
 
 public static class AudioProtocol
 {
@@ -50,6 +51,20 @@ public static class AudioProtocol
     {
         var header = new byte[HeaderSize];
         await stream.ReadExactlyAsync(header, token);
+        return await ReadFrameAsync(stream, header, session, token);
+    }
+
+    public static async Task<(AudioFrame? Frame, SessionControl Control)> ReadSessionPacketAsync(Stream stream, uint session, CancellationToken token)
+    {
+        var header = new byte[HeaderSize];
+        if (await stream.ReadAsync(header.AsMemory(0, 1), token) == 0) return (null, SessionControl.EndOfStream);
+        if (header[0] is (byte)SessionControl.Ready or (byte)SessionControl.Disconnect) return (null, (SessionControl)header[0]);
+        await stream.ReadExactlyAsync(header.AsMemory(1), token);
+        return (await ReadFrameAsync(stream, header, session, token), SessionControl.Audio);
+    }
+
+    private static async Task<AudioFrame> ReadFrameAsync(Stream stream, byte[] header, uint session, CancellationToken token)
+    {
         int length = ValidateHeader(header, session);
         var payload = new byte[length];
         await stream.ReadExactlyAsync(payload, token);

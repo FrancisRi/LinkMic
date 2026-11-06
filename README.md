@@ -10,7 +10,7 @@ Use your Android phone as a Windows microphone over **Bluetooth or Wi-Fi**. The 
 
 ## 下载与使用
 
-从 [最新正式 Release](https://github.com/FrancisRi/LinkMic/releases/latest) 下载 Windows **0.3.3** 和 Android **0.2.3**。Android APK 继续使用原开发签名，可覆盖安装之前同签名版本。[版本记录](CHANGELOG.md)。
+从 [最新正式 Release](https://github.com/FrancisRi/LinkMic/releases/latest) 下载 Windows **0.3.4** 和 Android **0.2.4**。Android APK 继续使用原开发签名，可覆盖安装之前同签名版本。[版本记录](CHANGELOG.md)。
 
 1. Windows：完整解压 ZIP，运行 `LinkMic.exe`，保留旁边的 `rnnoise.dll`。
 2. Android：安装 APK，允许麦克风及所用连接方式的权限；从旧版升级请覆盖安装以保留配对。
@@ -18,7 +18,7 @@ Use your Android phone as a Windows microphone over **Bluetooth or Wi-Fi**. The 
 4. Wi-Fi：两端处于同一可信局域网。电脑选择 Wi-Fi 并开始接收，手机填写电脑的 IPv4 地址后连接。使用 TCP 42791。
 5. 首次连接输入电脑显示的六位配对码；已记住的电脑下次免码。安卓右上角可查看电脑名称并选择遗忘。
 
-连接后显示本次连接时长。电脑端支持输入增益、静音以及默认关闭、可随时切换的 **RNNoise 背景降噪**。两端适配系统深浅色；手机切换语言后页面和录音通知同步翻译。
+连接后显示本次连接时长。双端均更新后，任一端点击「断开」，另一端会显示「已断开连接」。电脑端支持输入增益、静音以及默认关闭、可随时切换的 **RNNoise 背景降噪**。两端适配系统深浅色；手机切换语言后页面和录音通知同步翻译。
 
 普通扬声器输出用于监听。要让会议/录音软件使用手机声音，请另外安装 [VB-CABLE](https://vb-audio.com/Cable/)，LinkMic 选择 **CABLE Input**，会议软件的麦克风选择 **CABLE Output**。VB-CABLE 是独立许可的 donationware，欢迎向原作者[捐赠或购买许可](https://shop.vb-audio.com/)。无需修改 Windows 默认播放设备。
 

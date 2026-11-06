@@ -1,13 +1,13 @@
 # LinkMic：使用官方签名 VB-CABLE
 
 本版采用与 MicYou Windows 版相同的虚拟音频线缆方案：VB-CABLE。
-当前配套 Windows 0.3.3 和 Android 0.2.3；新版电脑降噪见 [RNNoise 说明](RNNOISE.md)，已安装驱动无需重装。名称列表与选择遗忘见 [更新说明](PAIRED-DEVICES.md)，安卓语言及按钮对齐见 [Android 0.2.3](ANDROID-0.2.3.md)。
+当前配套 Windows 0.3.4 和 Android 0.2.4；新版电脑降噪见 [RNNoise 说明](RNNOISE.md)，已安装驱动无需重装。名称列表与选择遗忘见 [更新说明](PAIRED-DEVICES.md)，安卓语言及按钮对齐见 [Android 0.2.3](ANDROID-0.2.3.md)。
 音频经现有 Windows 标准播放接口送入 CABLE Input，再由 CABLE Output 录音端提供给会议软件。
 桌面端的 Fluent 2、跟随系统深浅色及蓝牙断开修复继续保留。
 
 ## 在之前的 Windows 11 测试电脑安装
 
-1. 解压整个当前 Windows 发布 ZIP（当前为 `LinkMic-Windows-0.3.3-win-x64.zip`），关闭正在运行的旧 LinkMic。
+1. 解压整个当前 Windows 发布 ZIP（当前为 `LinkMic-Windows-0.3.4-win-x64.zip`），关闭正在运行的旧 LinkMic。
 2. 在 `drivers/vb-cable` 中，**另外解压原版** `VBCABLE_Driver_Pack45.zip` 到独立文件夹。
 3. 阅读原版 `readme.txt`，右键 `VBCABLE_Setup_x64.exe` → 以管理员身份运行，点击 Install Driver。
 4. 按原厂要求重启电脑，再打开新版 `LinkMic.exe`。

@@ -8,8 +8,8 @@ function Get-EntryHash($entry){
     $stream=$entry.Open();$sha=[Security.Cryptography.SHA256]::Create()
     try{([BitConverter]::ToString($sha.ComputeHash($stream))).Replace('-','').ToLowerInvariant()}finally{$sha.Dispose();$stream.Dispose()}
 }
-$bundle=[IO.Compression.ZipFile]::OpenRead("$artifacts\LinkMic-Windows-0.3.3-win-x64.zip")
-$apk=[IO.Compression.ZipFile]::OpenRead("$artifacts\LinkMic-Android-0.2.3-debug.apk")
+$bundle=[IO.Compression.ZipFile]::OpenRead("$artifacts\LinkMic-Windows-0.3.4-win-x64.zip")
+$apk=[IO.Compression.ZipFile]::OpenRead("$artifacts\LinkMic-Android-0.2.4-debug.apk")
 try{
     $bad=@($bundle.Entries | Where-Object {$_.FullName -match '((^|/)(paired-devices\.dat|paired-computers\.enc|audio-settings\.json)(\.|$)|fixture|\.pfx$|\.keystore$|test-results)'})
     if($bad.Count){throw 'Private/test data in release'}
@@ -22,7 +22,7 @@ try{
     if((Get-EntryHash $apk.GetEntry('assets/LinkMic-LICENSE.txt')) -ne (Get-FileHash -LiteralPath "$ProjectRoot\LICENSE").Hash.ToLowerInvariant()){throw 'Android MIT notice differs'}
     foreach($name in @('assets/THIRD-PARTY-NOTICES.txt','assets/Apache-2.0.txt')){if(!$apk.GetEntry($name)){throw "Missing Android notice: $name"}}
     $signer="$env:ANDROID_HOME\build-tools\35.0.0\apksigner.bat"
-    $new=@(& $signer verify --print-certs "$artifacts\LinkMic-Android-0.2.3-debug.apk")
+    $new=@(& $signer verify --print-certs "$artifacts\LinkMic-Android-0.2.4-debug.apk")
     if($LASTEXITCODE -ne 0){throw 'APK signature invalid'}
     $sameCertificate=$null
     if($PreviousApk){
@@ -35,7 +35,7 @@ try{
     }
     $checks=@(Get-Content "$artifacts\SHA256SUMS.txt")
     foreach($line in $checks){$hash,$relative=$line -split '  ',2;if((Get-FileHash -LiteralPath (Join-Path $artifacts $relative)).Hash.ToLowerInvariant() -ne $hash){throw "Checksum mismatch: $relative"}}
-    $report=[ordered]@{passed=$true;windowsVersion='0.3.3';androidVersion='0.2.3';bundledFilesMatch=$true;androidSignatureVerified=$true;sameAndroidUpdateCertificate=$sameCertificate;licensesIncluded=$true;noPrivatePairingStateBundled=$true;checksumsVerified=$checks.Count;hardwareRetestCompleted=$false}
+    $report=[ordered]@{passed=$true;windowsVersion='0.3.4';androidVersion='0.2.4';bundledFilesMatch=$true;androidSignatureVerified=$true;sameAndroidUpdateCertificate=$sameCertificate;licensesIncluded=$true;noPrivatePairingStateBundled=$true;checksumsVerified=$checks.Count;hardwareRetestCompleted=$false}
     $report | ConvertTo-Json | Set-Content "$artifacts\tests\public-release-verification.json"
     $report | ConvertTo-Json
 }finally{$bundle.Dispose();$apk.Dispose()}

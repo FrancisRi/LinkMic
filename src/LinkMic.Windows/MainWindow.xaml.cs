@@ -148,9 +148,9 @@ public partial class MainWindow : Window
         });
         SetBusy(true); OutputHint.Text = output.Hint;
         string address = BluetoothAddress.Text, code = PairCode.Text;
-        try { running = Task.Run(() => current.RunAsync(wifi, address, code, output)); await running; SetStatus("手机已断开。"); }
-        catch (OperationCanceledException) { SetStatus("已停止接收。"); }
-        catch (Exception) when (current.IsStopping) { SetStatus("已停止接收。"); }
+        try { running = Task.Run(() => current.RunAsync(wifi, address, code, output)); await running; SetStatus("已断开连接。"); }
+        catch (Exception) when (current.IsStopping) { SetStatus("已断开连接。"); }
+        catch (OperationCanceledException error) { Diagnostics.Write("session-timeout", error); SetStatus("连接超时。"); }
         catch (Exception error) { Diagnostics.Write("session-error", error); SetStatus("连接结束：" + error.Message); }
         finally { current.Dispose(); if (receiver == current) receiver = null; SetBusy(false); Meter.Value = 0; }
     }

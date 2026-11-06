@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework><UseWPF>true</UseWPF><AssemblyName>LinkMic</AssemblyName><ApplicationManifest>app.manifest</ApplicationManifest><ApplicationIcon>assets/LinkMic.ico</ApplicationIcon><Version>0.3.3</Version></PropertyGroup>
+  <PropertyGroup><OutputType>WinExe</OutputType><TargetFramework>net10.0-windows</TargetFramework><UseWPF>true</UseWPF><AssemblyName>LinkMic</AssemblyName><ApplicationManifest>app.manifest</ApplicationManifest><ApplicationIcon>assets/LinkMic.ico</ApplicationIcon><Version>0.3.4</Version></PropertyGroup>
   <ItemGroup><Resource Include="assets/LinkMic.ico"/><Resource Include="assets/LinkMic.png"/></ItemGroup>
   <ItemGroup><Content Include="../../LICENSE" Link="LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"/></ItemGroup>
   <ItemGroup><Content Include="../../native/win-x64/rnnoise.dll" Link="rnnoise.dll" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" ExcludeFromSingleFile="true"/></ItemGroup>

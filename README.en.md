@@ -8,7 +8,7 @@ Use your Android phone as a Windows microphone over **Bluetooth or Wi-Fi**. The 
 
 ## Download and setup
 
-Download Windows **0.3.3** and Android **0.2.3** from the [latest release](https://github.com/FrancisRi/LinkMic/releases/latest). The Android APK retains the existing development signing certificate and can update an earlier installation signed with the same certificate. See the [changelog](CHANGELOG.md).
+Download Windows **0.3.4** and Android **0.2.4** from the [latest release](https://github.com/FrancisRi/LinkMic/releases/latest). The Android APK retains the existing development signing certificate and can update an earlier installation signed with the same certificate. See the [changelog](CHANGELOG.md).
 
 1. **Windows:** Extract the entire ZIP and run `LinkMic.exe`. Keep `rnnoise.dll` in the same directory.
 2. **Android:** Install the APK and grant microphone access and the permissions requested for your connection method. When upgrading, install over the existing app to retain paired computers.
@@ -16,7 +16,7 @@ Download Windows **0.3.3** and Android **0.2.3** from the [latest release](https
 4. **Wi-Fi:** Connect both devices to the same trusted local network. Select Wi-Fi on the computer and start receiving, then enter the computer's IPv4 address in the phone app and connect. LinkMic uses TCP port **42791**.
 5. **Pairing:** For the first connection, enter the six-digit code displayed by the computer. Remembered computers reconnect without a code. The menu at the top right of the Android app lists paired computer names and lets you select which ones to forget.
 
-The app displays the elapsed time of the current connection. On Windows, you can adjust input gain, mute audio, and toggle **RNNoise background noise reduction** before or during a connection. RNNoise is off by default. Both apps support system light and dark modes. Android follows the phone's first system language: Chinese for Chinese, English for every other language. The interface and recording notification update when the system language changes.
+The app displays the elapsed time of the current connection. With both apps updated, selecting **Disconnect** on either device shows **Disconnected** on the other device. On Windows, you can adjust input gain, mute audio, and toggle **RNNoise background noise reduction** before or during a connection. RNNoise is off by default. Both apps support system light and dark modes. Android follows the phone's first system language: Chinese for Chinese, English for every other language. The interface and recording notification update when the system language changes.
 
 ## Use LinkMic in a meeting or recording app
 

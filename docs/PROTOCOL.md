@@ -51,6 +51,12 @@ Each frame represents 20 ms of mono audio. The receiver validates version, codec
 
 ADPCM payload: initial PCM sample int16, initial step index uint8 (0–88), reserved zero uint8, then 959 four-bit IMA codes packed low nibble first. The last byte's unused high nibble is zero. Each frame resets decoder state so dropped frames do not poison subsequent frames. Total packet size is 516 bytes, 25,800 bytes/s (206.4 kbit/s) before transport overhead. Bluetooth bandwidth and latency still require physical measurement.
 
+## Orderly disconnect
+
+After successful pairing, a supporting desktop writes the one-byte `0x01` capability signal. A supporting phone acknowledges it with `0x01` between audio frames, on the same writer as the audio. A user-initiated disconnect sends `0x02` before closing the transport; the recipient ends the session and closes its side. The sender waits up to 750 ms for teardown before forcing the transport closed. No signal is sent into an incomplete handshake.
+
+The phone sends control bytes only after receiving the desktop capability, so it remains compatible with older desktops. Older phones ignore the desktop's post-pairing bytes. EOF between frames without an acknowledged capability is reported neutrally as disconnected for legacy peers. Once the peer advertises support, EOF without a disconnect signal is unexpected unless the local user already requested a disconnect. Mid-frame EOF, invalid audio packets and receive timeouts remain errors.
+
 ## Playout
 
 Windows buffers at most five frames, starts after two frames and renders one frame every 20 ms. Overflow drops the oldest whole frame; underflow emits silence and re-enters prebuffering. Sequence comparisons handle uint32 wrap and reject duplicates/older frames. Gain is 0–2 with sample saturation; mute produces zero PCM.

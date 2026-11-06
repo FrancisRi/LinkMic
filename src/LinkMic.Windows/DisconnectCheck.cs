@@ -20,7 +20,7 @@ internal static class DisconnectCheck
         {
             // Use the actual WPF buttons and async handlers, actual Receiver and
             // loopback sockets; replace only the hardware audio sink.
-            foreach (string stage in new[] { "waiting", "pairing", "playing", "playing-cable", "peer-close", "window-close" }.Concat(Enumerable.Repeat("window-close", 9)))
+            foreach (string stage in new[] { "waiting", "pairing", "playing", "playing-cable", "peer-close", "phone-stop", "desktop-stop", "unexpected-close", "truncated-frame", "window-close" }.Concat(Enumerable.Repeat("window-close", 9)))
             {
                 var sink = new CountingOutput();
                 var listening = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -46,16 +46,23 @@ internal static class DisconnectCheck
                 ((Button)window.FindName("StartButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 await listening.Task.WaitAsync(TimeSpan.FromSeconds(5));
                 using var client = new TcpClient();
-                if (stage is "pairing" or "playing" or "playing-cable" or "peer-close")
+                using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                NetworkStream? peer = null;
+                if (stage != "waiting" && stage != "window-close")
                 {
                     await client.ConnectAsync(IPAddress.Loopback, AudioProtocol.Port);
                     if (stage != "pairing")
                     {
-                        var stream = client.GetStream();
+                        var stream = peer = client.GetStream();
                         string code = ((TextBox)window.FindName("PairCode")).Text;
                         await stream.WriteAsync(Encoding.ASCII.GetBytes($"LMIC/1 {code} RegressionPhone\n"));
-                        string reply = await Pairing.ReadLineAsync(stream, default);
+                        string reply = await Pairing.ReadLineAsync(stream, timeout.Token);
                         uint session = uint.Parse(reply.Split(' ')[1]);
+                        var signal = new byte[1];
+                        await stream.ReadExactlyAsync(signal, timeout.Token);
+                        if (signal[0] != (byte)SessionControl.Ready) throw new Exception("Desktop did not advertise disconnect support.");
+                        if (stage is "phone-stop" or "desktop-stop" or "unexpected-close" or "truncated-frame")
+                            await stream.WriteAsync(new[] { (byte)SessionControl.Ready }, timeout.Token);
                         for (uint sequence = 0; sequence < 8; sequence++)
                             await stream.WriteAsync(AudioProtocol.Encode(new(sequence, sequence * 20000, session, new short[960])));
                         await Task.Delay(120);
@@ -76,21 +83,39 @@ internal static class DisconnectCheck
                     }
                 }
                 Task completed = window.SessionCompletion;
-                if (stage == "peer-close") client.Dispose();
+                if (stage is "peer-close" or "unexpected-close") client.Dispose();
+                else if (stage == "phone-stop") await peer!.WriteAsync(new[] { (byte)SessionControl.Disconnect }, timeout.Token);
+                else if (stage == "truncated-frame")
+                {
+                    await peer!.WriteAsync("LM"u8.ToArray(), timeout.Token);
+                    client.Client.Shutdown(SocketShutdown.Send);
+                }
                 else if (stage == "window-close") window.Close();
                 else
                 {
                     var stop = (Button)window.FindName("StopButton");
                     stop.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                     stop.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    if (stage == "desktop-stop")
+                    {
+                        var signal = new byte[1];
+                        await peer!.ReadExactlyAsync(signal, timeout.Token);
+                        if (signal[0] != (byte)SessionControl.Disconnect) throw new Exception("Desktop closed without sending the disconnect signal.");
+                        client.Dispose();
+                    }
                 }
                 try { await completed.WaitAsync(TimeSpan.FromSeconds(5)); }
                 catch (Exception) when (completed.IsCompleted) { /* The UI handler owns the expected cancellation/network exception. */ }
                 await window.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
+                string finalStatus = ((TextBlock)window.FindName("StatusText")).Text;
+                if ((stage is "peer-close" or "phone-stop" or "desktop-stop") && finalStatus != "已断开连接。")
+                    throw new Exception("Graceful close was shown as: " + finalStatus);
+                if ((stage is "unexpected-close" or "truncated-frame") && !finalStatus.StartsWith("连接结束："))
+                    throw new Exception("An unexpected connection loss was shown as: " + finalStatus);
                 if (window.SessionActive || sink.Disposals != 1 || unhandled.Count != 0)
                     throw new Exception($"UI disconnect failed at {stage}: active={window.SessionActive}, disposals={sink.Disposals}, dispatcherErrors={unhandled.Count}");
                 if (stage != "window-close") window.Close();
-                results.Add(new { stage, passed = true, outputDisposedExactlyOnce = true, playoutWrites = sink.Writes });
+                results.Add(new { stage, passed = true, outputDisposedExactlyOnce = true, playoutWrites = sink.Writes, finalStatus });
             }
             var unusedSink = new CountingOutput();
             using var stoppedBeforeStart = new Receiver(_ => unusedSink, IPAddress.Loopback);

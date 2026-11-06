@@ -57,7 +57,7 @@ public final class MainActivity extends AppCompatActivity {
         modes.check((state==null?getPreferences(0).getBoolean("wifi",false):state.getBoolean("wifi",false))?R.id.mode_wifi:R.id.mode_bluetooth);showMode(modes.getCheckedButtonId()==R.id.mode_wifi);
         ((MaterialToolbar)findViewById(R.id.toolbar)).setOnMenuItemClickListener(item->{if(item.getItemId()==R.id.manage_devices){manageDevices();return true;}return false;});
         pairNew.setOnClickListener(view->{forcePairing=true;updatePairingCard();});
-        start.setOnClickListener(view->begin());stop.setOnClickListener(view->{MicService.status=UiStatus.message(R.string.stopped);stopService(new Intent(this,MicService.class));renderState();});
+        start.setOnClickListener(view->begin());stop.setOnClickListener(view->startService(new Intent(this,MicService.class).setAction(MicService.ACTION_STOP)));
         code.setOnEditorActionListener((view,action,event)->{if(action==android.view.inputmethod.EditorInfo.IME_ACTION_DONE){begin();return true;}return false;});
     }
     private void showMode(boolean useWifi){hostLayout.setVisibility(useWifi?View.VISIBLE:View.GONE);help.setText(useWifi?R.string.wifi_help:R.string.bluetooth_help);}

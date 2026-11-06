@@ -8,7 +8,7 @@ try {
     & $Gradle @arguments
     if($LASTEXITCODE -ne 0){throw 'Android UI tests, lint or APK build failed'}
 } finally { Pop-Location }
-$apk=Join-Path $ProjectRoot 'artifacts\LinkMic-Android-0.2.3-debug.apk'
+$apk=Join-Path $ProjectRoot 'artifacts\LinkMic-Android-0.2.4-debug.apk'
 Copy-Item -LiteralPath "$ProjectRoot\android\app\build\outputs\apk\debug\app-debug.apk" -Destination $apk
 & "$env:ANDROID_HOME\build-tools\35.0.0\apksigner.bat" verify --verbose --print-certs $apk
 if($LASTEXITCODE -ne 0){throw 'APK signature verification failed'}

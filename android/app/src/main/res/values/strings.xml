@@ -49,7 +49,8 @@
   <string name="connected_bluetooth">Connected · Bluetooth</string>
   <string name="connected_wifi">Connected · Wi-Fi</string>
   <string name="computer_disconnected">Computer disconnected</string>
-  <string name="connection_ended">Connection ended</string>
+  <string name="connection_disconnected">Disconnected</string>
+  <string name="connection_lost">Connection lost unexpectedly. Try reconnecting.</string>
   <string name="notification_channel">Microphone connection</string>
   <string name="notification_title">LinkMic microphone</string>
   <string name="notification_stop">Stop</string>
