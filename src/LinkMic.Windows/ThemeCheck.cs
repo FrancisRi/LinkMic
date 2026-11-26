@@ -1,7 +1,8 @@
 using System.Text.Json;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Media;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
+using Windows.UI;
 
 namespace LinkMic.Windows;
 internal static class ThemeCheck
@@ -12,14 +13,14 @@ internal static class ThemeCheck
         foreach (string mode in new[] { "Light", "Dark", "Light" })
         {
             window.SetAppearance(mode, persist: false);
-            await App.RenderPreviewAsync(window, Path.Combine(directory, $"fluent2-{mode.ToLowerInvariant()}.png"));
-            var code = (TextBox)window.FindName("PairCode");
+            await App.RenderPreviewAsync(window, Path.Combine(directory, $"winui3-{mode.ToLowerInvariant()}.png"));
+            var code = window.FindControl<TextBox>("PairCode");
             double contrast = Contrast(((SolidColorBrush)code.Foreground).Color, ((SolidColorBrush)code.Background).Color);
-            if (contrast < 4.5 || !SystemParameters.HighContrast && window.Theme.EffectiveMode != mode)
+            if (contrast < 4.5 || !window.Theme.HighContrast && window.Theme.EffectiveMode != mode)
                 throw new Exception($"Theme {mode} not applied, or unreadable pairing field: contrast {contrast:F2}");
             results.Add(new { requestedMode = mode, effectiveMode = window.Theme.EffectiveMode, pairingCodeContrast = contrast });
         }
-        await App.RenderPreviewAsync(window, Path.Combine(directory, "fluent2-compact.png"), 950, 700);
+        await App.RenderPreviewAsync(window, Path.Combine(directory, "winui3-compact.png"), 950, 700);
         await NativeWindowCheck.RunAsync(window, directory);
         await IntegrationCheck.RunAsync(directory, frame =>
         {
@@ -31,7 +32,7 @@ internal static class ThemeCheck
         {
             passed = true, runtimeTransitions = results, systemModeResolved = window.Theme.EffectiveMode,
             audioSessionSurvivedThemeChanges = true, compactLayoutRendered = true,
-            physicalDpiSwitchTested = false, windowsSettingsChangeTested = false, highContrastTested = SystemParameters.HighContrast
+            physicalDpiSwitchTested = false, windowsSettingsChangeTested = false, highContrastTested = window.Theme.HighContrast
         }, new JsonSerializerOptions { WriteIndented = true }));
     }
     private static double Contrast(Color a, Color b)
@@ -39,7 +40,7 @@ internal static class ThemeCheck
         // Fluent text brushes use alpha. Measure the displayed text against its
         // opaque pairing-field background, rather than ignoring that alpha.
         double alpha = a.A / 255d;
-        a = Color.FromRgb((byte)Math.Round(a.R * alpha + b.R * (1 - alpha)),
+        a = Color.FromArgb(255, (byte)Math.Round(a.R * alpha + b.R * (1 - alpha)),
             (byte)Math.Round(a.G * alpha + b.G * (1 - alpha)), (byte)Math.Round(a.B * alpha + b.B * (1 - alpha)));
         static double Luminance(Color c)
         {

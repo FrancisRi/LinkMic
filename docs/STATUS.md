@@ -1,10 +1,10 @@
 # Current release and verification
 
-Windows **0.3.4**, Android **0.2.4**. First public source publication: 2026-10-19.
+Windows **0.3.5**, Android **0.2.4**. First public source publication: 2026-10-19.
 
 The tested v0.3.3 release was promoted from prerelease to a regular GitHub Release on 2026-10-19 and selected as Latest. It retains the same tagged application source, Windows ZIP, Android APK, signing certificate and checksums. Promotion changes release metadata and documentation, not the application binaries. Android still uses the existing development signing certificate.
 
-Windows provides Bluetooth/Wi-Fi reception, Fluent 2/system theme support and optional RNNoise. Android uses Material 3, per-second duration, persistent named-computer pairing and Chinese/English selected by the first system language. Both apps now distinguish an explicit disconnect from an unexpected link loss.
+Windows provides Bluetooth/Wi-Fi reception, WinUI 3 with Mica and system theme support and optional RNNoise. Android uses Material 3, per-second duration, persistent named-computer pairing and Chinese/English selected by the first system language. Both apps now distinguish an explicit disconnect from an unexpected link loss.
 
 Android tests cover desktop-initiated disconnect, phone-initiated disconnect, legacy closure and unexpected EOF, along with the existing UI checks. Windows regression checks exercise the real buttons and receiver over loopback, with an audio sink fixture. Java/.NET loopback checks also cover encoded audio, v3 authentication and older v2 clients. See `scripts/verify-android.ps1` and `scripts/verify-windows.ps1`.
 

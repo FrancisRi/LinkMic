@@ -3,8 +3,8 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
-using System.Windows;
-using System.Windows.Controls;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using LinkMic.Core;
 
 namespace LinkMic.Windows;
@@ -83,21 +83,22 @@ internal static class RnNoiseCheck
             actual.Status += value => { if (value.StartsWith("等待")) ready.TrySetResult(); };
             return actual;
         });
-        new System.Windows.Interop.WindowInteropHelper(window).EnsureHandle();
+        window.Activate();
+        await App.WaitForLayoutAsync(window);
         try
         {
-            var toggle = (CheckBox)window.FindName("NoiseReduction");
+            var toggle = window.FindControl<CheckBox>("NoiseReduction");
             if (!toggle.IsEnabled || toggle.IsChecked == true) throw new Exception("RNNoise UI is not available/off by default.");
             toggle.IsChecked = true;
             var reopened = new MainWindow();
-            if (((CheckBox)reopened.FindName("NoiseReduction")).IsChecked != true) throw new Exception("UI preference did not survive reopening.");
+            if (reopened.FindControl<CheckBox>("NoiseReduction").IsChecked != true) throw new Exception("UI preference did not survive reopening.");
             reopened.Close(); toggle.IsChecked = false;
-            ((RadioButton)window.FindName("WifiMode")).IsChecked = true;
-            ((Button)window.FindName("StartButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            window.FindControl<RadioButton>("WifiMode").IsChecked = true;
+            NativeWindowCheck.Invoke(window.FindControl<Button>("StartButton"));
             await ready.Task.WaitAsync(TimeSpan.FromSeconds(5));
             using var client = new TcpClient(); await client.ConnectAsync(IPAddress.Loopback, AudioProtocol.Port);
             var stream = client.GetStream();
-            string code = ((TextBox)window.FindName("PairCode")).Text;
+            string code = window.FindControl<TextBox>("PairCode").Text;
             await stream.WriteAsync(Encoding.ASCII.GetBytes($"LMIC/1 {code} NoiseFixture\n"));
             uint session = uint.Parse((await Pairing.ReadLineAsync(stream, default)).Split(' ')[1]);
             short[] source = Noise(new Random(192)); byte[] pcm = AudioProtocol.ToPcm(source);
@@ -105,24 +106,24 @@ internal static class RnNoiseCheck
             {
                 if (frame == 15 || frame == 75) toggle.IsChecked = true;
                 if (frame == 45) { toggle.IsChecked = false; sink.Phase = 1; }
-                if (frame == 75) ((CheckBox)window.FindName("Muted")).IsChecked = true;
+                if (frame == 75) window.FindControl<CheckBox>("Muted").IsChecked = true;
                 if (frame == 80) sink.Phase = 2;
                 if (frame >= 95) toggle.IsChecked = frame % 2 == 0;
                 if (!toggle.IsEnabled || actual!.NoiseReductionEnabled != (toggle.IsChecked == true)) throw new Exception("Live checkbox did not reach the audio worker.");
                 await stream.WriteAsync(AudioProtocol.Encode(new(frame, frame * 20000, session, source), compressed: false));
                 await Task.Delay(20);
             }
-            ((Button)window.FindName("StopButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+            NativeWindowCheck.Invoke(window.FindControl<Button>("StopButton"));
             try { await window.SessionCompletion.WaitAsync(TimeSpan.FromSeconds(5)); }
             catch (Exception) when (actual!.IsStopping && window.SessionCompletion.IsCompleted) { }
-            await window.Dispatcher.InvokeAsync(() => { }, System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            await App.WaitForLayoutAsync(window);
             if (window.SessionActive || !sink.Disposed || sink.Writes < 80 || !sink.DryAfter.Any(value => value.SequenceEqual(pcm)) || sink.MutedAfter.Any(value => value.Any(sample => sample != 0)) || sink.MutedAfter.Count < 10)
                 throw new Exception("Live toggle/bypass/mute/disconnect regression failed.");
             toggle.IsChecked = true; window.SetAppearance("Dark", persist: false);
             await App.RenderPreviewAsync(window, Path.Combine(directory, "rnnoise-dark.png"));
             window.SetAppearance("Light", persist: false);
             await App.RenderPreviewAsync(window, Path.Combine(directory, "rnnoise-light.png"));
-            return new { passed = true, realWpfCheckbox = true, actualReceiver = true, liveToggle = true, rawAudioRestored = true, mutePreserved = true, disconnectedCleanly = true, writes = sink.Writes, hardwareAudio = false };
+            return new { passed = true, realWinUiCheckbox = true, actualReceiver = true, liveToggle = true, rawAudioRestored = true, mutePreserved = true, disconnectedCleanly = true, writes = sink.Writes, hardwareAudio = false };
         }
         finally { actual?.RequestStop(); try { await window.SessionCompletion; } catch { } window.Close(); }
     }

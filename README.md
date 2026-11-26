@@ -4,15 +4,15 @@
 
 简体中文 | [English](README.en.md)
 
-把 Android 手机变成 Windows 电脑的麦克风，支持 **蓝牙和 Wi-Fi**。电脑端采用 Fluent 2 与原生 Windows 窗口，安卓端使用 Material 3。
+把 Android 手机变成 Windows 电脑的麦克风，支持 **蓝牙和 Wi-Fi**。电脑端采用 WinUI 3 与原生 Windows 窗口，安卓端使用 Material 3。
 
-Use your Android phone as a Windows microphone over **Bluetooth or Wi-Fi**. The desktop app uses Fluent 2/native Windows windows; Android uses Material 3 and follows the first system language: Chinese for Chinese, English otherwise.
+Use your Android phone as a Windows microphone over **Bluetooth or Wi-Fi**. The desktop app uses WinUI 3 with the native Windows window frame; Android uses Material 3 and follows the first system language: Chinese for Chinese, English otherwise.
 
 ## 下载与使用
 
-从 [最新正式 Release](https://github.com/FrancisRi/LinkMic/releases/latest) 下载 Windows **0.3.4** 和 Android **0.2.4**。Android APK 继续使用原开发签名，可覆盖安装之前同签名版本。[版本记录](CHANGELOG.md)。
+从 [最新正式 Release](https://github.com/FrancisRi/LinkMic/releases/latest) 下载 Windows **0.3.5** 和 Android **0.2.4**。Android APK 继续使用原开发签名，可覆盖安装之前同签名版本。[版本记录](CHANGELOG.md)。
 
-1. Windows：完整解压 ZIP，运行 `LinkMic.exe`，保留旁边的 `rnnoise.dll`。
+1. Windows：完整解压 ZIP，运行 `LinkMic.exe`，保留同目录的文件和子文件夹。
 2. Android：安装 APK，允许麦克风及所用连接方式的权限；从旧版升级请覆盖安装以保留配对。
 3. 蓝牙：先在系统设置中配对手机和电脑。手机选择蓝牙并开始连接，电脑刷新、选中该手机并开始接收。
 4. Wi-Fi：两端处于同一可信局域网。电脑选择 Wi-Fi 并开始接收，手机填写电脑的 IPv4 地址后连接。使用 TCP 42791。
@@ -50,14 +50,14 @@ Or open `android/` in Android Studio and `LinkMic.slnx` in a .NET 10-capable IDE
 
 `scripts/env.ps1` respects existing `JAVA_HOME`, `ANDROID_HOME`/`ANDROID_SDK_ROOT`, `DOTNET_ROOT` and cache settings. Optional portable tools can be selected with `LINKMIC_TOOLS_ROOT`; installed tools also work. RNNoise downloads are verified against `third-party/rnnoise/provenance.json`. The normal application does not need the WDK.
 
-Outputs are under `artifacts/`. See [release instructions](docs/RELEASING.md). Android debug signing uses your local development key. A build on another machine cannot overwrite an installation signed with a different key without uninstalling it first. Never commit signing keys.
+The self-contained WinUI 3 build is under `artifacts/windows-winui/`. Run `LinkMic.exe` from that folder. See [release instructions](docs/RELEASING.md). Android debug signing uses your local development key. A build on another machine cannot overwrite an installation signed with a different key without uninstalling it first. Never commit signing keys.
 
 ## Source layout
 
 | Path | Purpose |
 | --- | --- |
 | `src/LinkMic.Core` | Pairing, framing, IMA ADPCM and playout buffering |
-| `src/LinkMic.Windows` | WPF receiver, Fluent UI, Bluetooth/Wi-Fi, output and optional RNNoise |
+| `src/LinkMic.Windows` | WinUI 3 receiver, Bluetooth/Wi-Fi, output and optional RNNoise |
 | `android/app` | Java microphone service, Material 3 UI and remembered devices |
 | `tests`, `scripts` | Cross-language checks, builds and verification |
 | `drivers` | Optional experimental WaveRT driver, separately licensed under MS-PL |

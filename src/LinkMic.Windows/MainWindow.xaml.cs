@@ -1,9 +1,11 @@
-using System.ComponentModel;
 using System.Net;
 using System.Net.Sockets;
-using System.Windows;
-using System.Windows.Controls;
+using System.Runtime.InteropServices;
 using LinkMic.Core;
+using Microsoft.UI.Windowing;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using Windows.Graphics;
 
 namespace LinkMic.Windows;
 public partial class MainWindow : Window
@@ -12,18 +14,20 @@ public partial class MainWindow : Window
     private readonly Func<Receiver> receiverFactory;
     private readonly ThemeController theme;
     private bool themeReady;
+    private bool closeRequested;
     private long displayedSeconds = -1;
     public ThemeController Theme => theme;
     public MainWindow() : this(() => new Receiver()) { }
     internal MainWindow(Func<Receiver> receiverFactory)
     {
         this.receiverFactory = receiverFactory;
-        InitializeComponent(); theme = new ThemeController(this);
+        InitializeComponent();
+        ExtendsContentIntoTitleBar = false;
+        ConfigureWindow();
+        theme = new ThemeController(WindowRoot, AppWindow.TitleBar);
         ThemeChoice.SelectedIndex = theme.Preference == "Light" ? 1 : theme.Preference == "Dark" ? 2 : 0;
-        themeReady = true; Closed += (_, _) => theme.Dispose();
-        Width = Math.Min(Width, SystemParameters.WorkArea.Width);
-        Height = Math.Min(Height, SystemParameters.WorkArea.Height);
-        MinHeight = Math.Min(MinHeight, Height); MinWidth = Math.Min(MinWidth, Width);
+        themeReady = true;
+        WindowRoot.SelectedItem = ConnectNav;
         PairCode.Text = Pairing.NewCode();
         RefreshPairingState();
         RefreshOutputDevices();
@@ -36,7 +40,44 @@ public partial class MainWindow : Window
         UpdateNoiseReductionHint();
         if (!NoiseReduction.IsEnabled) Diagnostics.Write("rnnoise-unavailable", new InvalidOperationException(libraryError));
         NoiseReduction.Checked += NoiseReductionChanged; NoiseReduction.Unchecked += NoiseReductionChanged;
-        Closing += OnClosing;
+        AppWindow.Closing += OnClosing;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(IntPtr window);
+
+    internal IntPtr Handle => WinRT.Interop.WindowNative.GetWindowHandle(this);
+    internal double Scale => GetDpiForWindow(Handle) / 96d;
+    internal T FindControl<T>(string name) where T : FrameworkElement =>
+        WindowRoot.FindName(name) as T ?? throw new InvalidOperationException($"Control '{name}' was not found.");
+
+    private void ConfigureWindow()
+    {
+        var appWindow = AppWindow;
+        appWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "assets", "LinkMic.ico"));
+        var area = DisplayArea.GetFromWindowId(appWindow.Id, DisplayAreaFallback.Primary);
+        var work = area.WorkArea;
+        double scale = Scale;
+        int width = Math.Min((int)Math.Round(1080 * scale), work.Width);
+        int height = Math.Min((int)Math.Round(800 * scale), work.Height);
+        appWindow.MoveAndResize(new RectInt32(area.OuterBounds.X + work.X + (work.Width - width) / 2,
+            area.OuterBounds.Y + work.Y + (work.Height - height) / 2, width, height));
+        UpdateMinimumSize();
+        appWindow.Changed += (_, change) =>
+        {
+            if (change.DidPositionChange || change.DidSizeChange) UpdateMinimumSize();
+        };
+    }
+
+    private void UpdateMinimumSize()
+    {
+        var work = DisplayArea.GetFromWindowId(AppWindow.Id, DisplayAreaFallback.Primary).WorkArea;
+        var presenter = (OverlappedPresenter)AppWindow.Presenter;
+        double scale = Scale;
+        int width = Math.Min((int)Math.Round(880 * scale), work.Width);
+        int height = Math.Min((int)Math.Round(640 * scale), work.Height);
+        if (presenter.PreferredMinimumWidth != width) presenter.PreferredMinimumWidth = width;
+        if (presenter.PreferredMinimumHeight != height) presenter.PreferredMinimumHeight = height;
     }
     private void UpdateNoiseReductionHint() => NoiseReductionHint.Text = !NoiseReduction.IsEnabled
         ? "降噪组件不可用，请使用完整 Windows 更新包。"
@@ -49,18 +90,19 @@ public partial class MainWindow : Window
         try { NoiseReductionSettings.Save(enabled); }
         catch (Exception error) when (error is System.IO.IOException or UnauthorizedAccessException) { Diagnostics.Write("audio-settings-save", error); Log("降噪开关已生效，但偏好未能保存。"); }
     }
-    private void Navigate(int page)
+    private void NavigationChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs e)
     {
-        if (ConnectPage is null || PageTitle is null || SettingsPage is null) return;
-        ConnectPage.Visibility = page == 0 ? Visibility.Visible : Visibility.Collapsed;
-        GuidePage.Visibility = page == 1 ? Visibility.Visible : Visibility.Collapsed;
-        LogsPage.Visibility = page == 2 ? Visibility.Visible : Visibility.Collapsed;
-        SettingsPage.Visibility = page == 3 ? Visibility.Visible : Visibility.Collapsed;
-        PageTitle.Text = page switch { 1 => "使用指南", 2 => "运行日志", 3 => "设置", _ => "连接与音频" };
-        PageSubtitle.Text = page switch { 1 => "从连接手机，到在会议软件中使用。", 2 => "查看最近的连接状态与设备信息。", 3 => "个性化 LinkMic 的外观。", _ => "通过蓝牙或 Wi-Fi，让手机成为电脑的麦克风。" };
-        var navigation = page switch { 1 => GuideNav, 2 => LogsNav, 3 => SettingsNav, _ => ConnectNav };
-        if (navigation.IsChecked != true) navigation.IsChecked = true;
-        PageScroll.ScrollToTop();
+        if (e.SelectedItem is not NavigationViewItem item) return;
+        ConnectPage.Visibility = item == ConnectNav ? Visibility.Visible : Visibility.Collapsed;
+        GuidePage.Visibility = item == GuideNav ? Visibility.Visible : Visibility.Collapsed;
+        LogsPage.Visibility = item == LogsNav ? Visibility.Visible : Visibility.Collapsed;
+        SettingsPage.Visibility = item == SettingsNav ? Visibility.Visible : Visibility.Collapsed;
+        PageTitle.Text = (string)item.Content;
+        PageSubtitle.Text = item == GuideNav ? "从连接手机，到在会议软件中使用。"
+            : item == LogsNav ? "查看最近的连接状态与设备信息。"
+            : item == SettingsNav ? "个性化 LinkMic 的外观。"
+            : "通过蓝牙或 Wi-Fi，让手机成为电脑的麦克风。";
+        PageScroll.ChangeView(null, 0, null, disableAnimation: true);
     }
     private void ThemeChanged(object sender, SelectionChangedEventArgs e)
     {
@@ -72,19 +114,25 @@ public partial class MainWindow : Window
         ThemeChoice.SelectedIndex = theme.Preference == "Light" ? 1 : theme.Preference == "Dark" ? 2 : 0;
         themeReady = true;
     }
-    private void ShowConnect(object sender, RoutedEventArgs e) => Navigate(0);
-    private void ShowGuide(object sender, RoutedEventArgs e) => Navigate(1);
-    private void ShowLogs(object sender, RoutedEventArgs e) => Navigate(2);
-    private void ShowSettings(object sender, RoutedEventArgs e) => Navigate(3);
     private void RefreshPairingState()
     {
         try { PairedDevicesInfo.Text = $"已记住 {DeviceTrustStore.Count} 台手机；下次连接自动校验身份。"; }
         catch (Exception error) { PairedDevicesInfo.Text = "配对记录不可读取，可忘记设备后重新配对。"; Diagnostics.Write("device-trust-read", error); }
     }
-    private void ForgetDevices(object sender, RoutedEventArgs e)
+    private async void ForgetDevices(object sender, RoutedEventArgs e)
     {
         if (receiver is not null) return;
-        if (MessageBox.Show(this, "忘记后，这些手机下次连接需要重新输入配对码。", "忘记已配对设备", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK) return;
+        var dialog = new ContentDialog
+        {
+            XamlRoot = WindowRoot.XamlRoot,
+            RequestedTheme = WindowRoot.RequestedTheme,
+            Title = "忘记已配对设备",
+            Content = "忘记后，这些手机下次连接需要重新输入配对码。",
+            PrimaryButtonText = "忘记",
+            CloseButtonText = "取消",
+            DefaultButton = ContentDialogButton.Close
+        };
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary || receiver is not null) return;
         try { DeviceTrustStore.ForgetAll(); PairCode.Text = Pairing.NewCode(); RefreshPairingState(); SetStatus("已忘记设备，下次连接请重新配对。"); }
         catch (Exception error) { Diagnostics.Write("device-trust-reset", error); SetStatus("无法忘记设备：" + error.Message); }
     }
@@ -108,7 +156,7 @@ public partial class MainWindow : Window
     private void OpenDriverFiles(object sender, RoutedEventArgs e)
     {
         string path = System.IO.Path.Combine(AppContext.BaseDirectory, "drivers", "vb-cable");
-        if (!System.IO.Directory.Exists(path)) { Navigate(1); SetStatus("请使用完整 Windows ZIP；VB-CABLE 官方地址：https://vb-audio.com/Cable/"); return; }
+        if (!System.IO.Directory.Exists(path)) { WindowRoot.SelectedItem = GuideNav; SetStatus("请使用完整 Windows ZIP，VB-CABLE 官方地址为 https://vb-audio.com/Cable/"); return; }
         try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(path) { UseShellExecute = true }); }
         catch (Exception error) { Diagnostics.Write("driver-folder", error); SetStatus("无法打开驱动文件夹：" + error.Message); }
     }
@@ -124,20 +172,26 @@ public partial class MainWindow : Window
     private void DeviceSelected(object sender, SelectionChangedEventArgs e) { if (Devices.SelectedItem is PairedPhone phone) BluetoothAddress.Text = phone.Address; }
     private async void StartClicked(object sender, RoutedEventArgs e)
     {
-        if (receiver is not null) return;
+        if (receiver is not null || closeRequested) return;
+        running = ReceiveAsync();
+        await running;
+    }
+
+    private async Task ReceiveAsync()
+    {
         if (Outputs.SelectedItem is not OutputDevice output) { SetStatus("请选择音频输出设备。"); return; }
         bool wifi = WifiMode.IsChecked == true;
         if (!wifi && BluetoothAddress.Text.Replace(":", "").Replace("-", "").Length != 12) { SetStatus("请先选择已配对手机或填写蓝牙地址。"); return; }
         var current = receiverFactory(); receiver = current; receiver.Gain = Gain.Value; receiver.Muted = Muted.IsChecked == true;
         receiver.NoiseReductionEnabled = NoiseReduction.IsEnabled && NoiseReduction.IsChecked == true;
-        receiver.AudioProcessingError += message => Dispatcher.InvokeAsync(() =>
+        receiver.AudioProcessingError += message => DispatcherQueue.TryEnqueue(() =>
         {
             if (receiver != current) return;
             NoiseReduction.IsChecked = false; NoiseReductionHint.Text = message; Log(message);
         });
         displayedSeconds = -1; AudioStats.Text = "48 kHz · 单声道 · 等待连接";
-        receiver.Status += message => Dispatcher.InvokeAsync(() => { if (receiver != current) return; SetStatus(message); if (message.StartsWith("已连接")) RefreshPairingState(); });
-        receiver.Stats += stats => Dispatcher.InvokeAsync(() =>
+        receiver.Status += message => DispatcherQueue.TryEnqueue(() => { if (receiver != current) return; SetStatus(message); if (message.StartsWith("已连接")) RefreshPairingState(); });
+        receiver.Stats += stats => DispatcherQueue.TryEnqueue(() =>
         {
             if (receiver != current) return;
             Meter.Value = stats.Level;
@@ -148,7 +202,7 @@ public partial class MainWindow : Window
         });
         SetBusy(true); OutputHint.Text = output.Hint;
         string address = BluetoothAddress.Text, code = PairCode.Text;
-        try { running = Task.Run(() => current.RunAsync(wifi, address, code, output)); await running; SetStatus("已断开连接。"); }
+        try { await Task.Run(() => current.RunAsync(wifi, address, code, output)); SetStatus("已断开连接。"); }
         catch (Exception) when (current.IsStopping) { SetStatus("已断开连接。"); }
         catch (OperationCanceledException error) { Diagnostics.Write("session-timeout", error); SetStatus("连接超时。"); }
         catch (Exception error) { Diagnostics.Write("session-error", error); SetStatus("连接结束：" + error.Message); }
@@ -161,18 +215,27 @@ public partial class MainWindow : Window
     private void SetBadge(bool connected, string text)
     {
         StateBadge.Text = text;
-        StateContainer.SetResourceReference(Border.BackgroundProperty, connected ? "SystemFillColorSuccessBackgroundBrush" : "SubtleFillColorSecondaryBrush");
-        StateBadge.SetResourceReference(TextBlock.ForegroundProperty, connected ? "SystemFillColorSuccessBrush" : "TextFillColorSecondaryBrush");
+        StateContainer.Visibility = connected ? Visibility.Collapsed : Visibility.Visible;
+        ConnectedBadge.Visibility = connected ? Visibility.Visible : Visibility.Collapsed;
     }
     private void SetStatus(string message) { StatusText.Text = message; bool connected = message.StartsWith("已连接"); SetBadge(connected, connected ? "●  已连接" : receiver is null ? "●  未连接" : "●  会话中"); Log(message); }
-    private void Log(string message) { if (LogText is null) return; if (LogText.Text.Length > 16000) LogText.Text = LogText.Text[^8000..]; LogText.AppendText($"{DateTime.Now:HH:mm:ss}  {message}\n"); LogText.ScrollToEnd(); }
-    private bool closing;
-    private async void OnClosing(object? sender, CancelEventArgs e)
+    private void Log(string message)
     {
-        if (closing || running is null || running.IsCompleted) return;
-        e.Cancel = true; receiver?.RequestStop(); try { await running; } catch (Exception) { }
-        // Cancellation can finish synchronously; leave the original Closing event
-        // before calling Close again, otherwise WPF rejects a reentrant close.
-        closing = true; _ = Dispatcher.BeginInvoke(new Action(Close));
+        string log = LogText.Text;
+        if (log.Length > 16000) log = log[^8000..];
+        LogText.Text = $"{log}{DateTime.Now:HH:mm:ss}  {message}\r\n";
+        LogText.Select(LogText.Text.Length, 0);
+    }
+
+    private async void OnClosing(AppWindow sender, AppWindowClosingEventArgs e)
+    {
+        if (running is null || running.IsCompleted) return;
+        e.Cancel = true;
+        if (closeRequested) return;
+        closeRequested = true;
+        receiver?.RequestStop();
+        // Let the current Closing event return before closing the window again.
+        try { await running; }
+        finally { DispatcherQueue.TryEnqueue(Close); }
     }
 }

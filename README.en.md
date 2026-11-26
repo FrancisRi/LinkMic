@@ -4,13 +4,13 @@
 
 [简体中文](README.md) | English
 
-Use your Android phone as a Windows microphone over **Bluetooth or Wi-Fi**. The desktop app uses Fluent 2 with the native Windows window frame; the Android app uses Material 3.
+Use your Android phone as a Windows microphone over **Bluetooth or Wi-Fi**. The desktop app uses WinUI 3 with the native Windows window frame; the Android app uses Material 3.
 
 ## Download and setup
 
-Download Windows **0.3.4** and Android **0.2.4** from the [latest release](https://github.com/FrancisRi/LinkMic/releases/latest). The Android APK retains the existing development signing certificate and can update an earlier installation signed with the same certificate. See the [changelog](CHANGELOG.md).
+Download Windows **0.3.5** and Android **0.2.4** from the [latest release](https://github.com/FrancisRi/LinkMic/releases/latest). The Android APK retains the existing development signing certificate and can update an earlier installation signed with the same certificate. See the [changelog](CHANGELOG.md).
 
-1. **Windows:** Extract the entire ZIP and run `LinkMic.exe`. Keep `rnnoise.dll` in the same directory.
+1. **Windows:** Extract the entire ZIP and run `LinkMic.exe`. Keep the extracted files and folders together.
 2. **Android:** Install the APK and grant microphone access and the permissions requested for your connection method. When upgrading, install over the existing app to retain paired computers.
 3. **Bluetooth:** Pair the phone and computer in their system Bluetooth settings first. On the phone, select Bluetooth and tap **Connect**. On the computer, refresh the paired-device list, select the phone, and start receiving.
 4. **Wi-Fi:** Connect both devices to the same trusted local network. Select Wi-Fi on the computer and start receiving, then enter the computer's IPv4 address in the phone app and connect. LinkMic uses TCP port **42791**.
@@ -64,14 +64,14 @@ The first build requires internet access to restore dependencies and download RN
 
 `scripts/env.ps1` respects existing `JAVA_HOME`, `ANDROID_HOME`/`ANDROID_SDK_ROOT`, `DOTNET_ROOT`, and cache settings. Set `LINKMIC_TOOLS_ROOT` to use an optional portable tool directory; installed tools also work. RNNoise downloads are verified against the hashes in `third-party/rnnoise/provenance.json`. Building the normal application does not require the WDK.
 
-Build outputs are written to `artifacts/`. See the [release instructions](docs/RELEASING.md) for packaging and publishing. Android debug builds use your local development key. If a build is signed with a different key, you must uninstall the existing app before installing it. Never commit signing keys.
+The self-contained WinUI 3 build is written to `artifacts/windows-winui/`. Run `LinkMic.exe` from that folder. See the [release instructions](docs/RELEASING.md) for packaging and publishing. Android debug builds use your local development key. If a build is signed with a different key, you must uninstall the existing app before installing it. Never commit signing keys.
 
 ## Source layout
 
 | Path | Purpose |
 | --- | --- |
 | `src/LinkMic.Core` | Pairing, framing, IMA ADPCM, and playout buffering |
-| `src/LinkMic.Windows` | WPF receiver, Fluent UI, Bluetooth/Wi-Fi, audio output, and optional RNNoise |
+| `src/LinkMic.Windows` | WinUI 3 receiver, Bluetooth/Wi-Fi, audio output, and optional RNNoise |
 | `android/app` | Java microphone service, Material 3 UI, and remembered computers |
 | `tests`, `scripts` | Cross-language checks, builds, and verification |
 | `drivers` | Optional experimental WaveRT driver, separately licensed under MS-PL |

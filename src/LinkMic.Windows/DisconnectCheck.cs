@@ -2,9 +2,8 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.Json;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Threading;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
 using LinkMic.Core;
 
 namespace LinkMic.Windows;
@@ -14,11 +13,12 @@ internal static class DisconnectCheck
     {
         var results = new List<object>();
         var unhandled = new List<Exception>();
-        void CaptureError(object sender, DispatcherUnhandledExceptionEventArgs e) { unhandled.Add(e.Exception); e.Handled = true; }
-        Application.Current.DispatcherUnhandledException += CaptureError;
+        var app = Application.Current;
+        void CaptureError(object sender, Microsoft.UI.Xaml.UnhandledExceptionEventArgs e) { unhandled.Add(e.Exception); e.Handled = true; }
+        app.UnhandledException += CaptureError;
         try
         {
-            // Use the actual WPF buttons and async handlers, actual Receiver and
+            // Use the actual WinUI buttons and async handlers, actual Receiver and
             // loopback sockets; replace only the hardware audio sink.
             foreach (string stage in new[] { "waiting", "pairing", "playing", "playing-cable", "peer-close", "phone-stop", "desktop-stop", "unexpected-close", "truncated-frame", "window-close" }.Concat(Enumerable.Repeat("window-close", 9)))
             {
@@ -35,15 +35,17 @@ internal static class DisconnectCheck
                     receiver.Status += status => { if (status.StartsWith("等待")) listening.TrySetResult(); };
                     return receiver;
                 });
-                new System.Windows.Interop.WindowInteropHelper(window).EnsureHandle();
-                ((RadioButton)window.FindName("WifiMode")).IsChecked = true;
+                window.Activate();
+                await App.WaitForLayoutAsync(window);
+                var status = window.FindControl<TextBlock>("StatusText");
+                window.FindControl<RadioButton>("WifiMode").IsChecked = true;
                 if (stage == "playing-cable")
                 {
-                    var outputs = (ComboBox)window.FindName("Outputs");
+                    var outputs = window.FindControl<ComboBox>("Outputs");
                     outputs.ItemsSource = new[] { WaveOutput.DescribeDevice(41, "CABLE Input (VB-Audio Virtual C") };
                     outputs.SelectedIndex = 0;
                 }
-                ((Button)window.FindName("StartButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                NativeWindowCheck.Invoke(window.FindControl<Button>("StartButton"));
                 await listening.Task.WaitAsync(TimeSpan.FromSeconds(5));
                 using var client = new TcpClient();
                 using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
@@ -54,7 +56,7 @@ internal static class DisconnectCheck
                     if (stage != "pairing")
                     {
                         var stream = peer = client.GetStream();
-                        string code = ((TextBox)window.FindName("PairCode")).Text;
+                        string code = window.FindControl<TextBox>("PairCode").Text;
                         await stream.WriteAsync(Encoding.ASCII.GetBytes($"LMIC/1 {code} RegressionPhone\n"));
                         string reply = await Pairing.ReadLineAsync(stream, timeout.Token);
                         uint session = uint.Parse(reply.Split(' ')[1]);
@@ -67,22 +69,23 @@ internal static class DisconnectCheck
                             await stream.WriteAsync(AudioProtocol.Encode(new(sequence, sequence * 20000, session, new short[960])));
                         await Task.Delay(120);
                         if (sink.Writes == 0) throw new Exception("Receiver never entered playout.");
-                        if (stage == "playing-cable" && (!((TextBlock)window.FindName("OutputHint")).Text.Contains("CABLE Output")
-                            || ((Button)window.FindName("OutputsRefreshButton")).IsEnabled))
+                        if (stage == "playing-cable" && (!window.FindControl<TextBlock>("OutputHint").Text.Contains("CABLE Output")
+                            || window.FindControl<Button>("OutputsRefreshButton").IsEnabled))
                             throw new Exception("VB-CABLE active UI did not show the recording endpoint or lock device refresh.");
                         if (stage == "playing-cable")
                         {
-                            ((RadioButton)window.FindName("SettingsNav")).IsChecked = true;
+                            ((NavigationView)window.Content).SelectedItem = window.FindControl<NavigationViewItem>("SettingsNav");
                             window.SetAppearance("Dark", persist: false);
-                            if (((TextBlock)window.FindName("PageTitle")).Text != "设置"
-                                || ((Button)window.FindName("RegenerateCodeButton")).IsEnabled
-                                || ((Button)window.FindName("StopButton")).Visibility != Visibility.Visible)
+                            if (window.FindControl<TextBlock>("PageTitle").Text != "设置"
+                                || window.FindControl<Button>("RegenerateCodeButton").IsEnabled
+                                || window.FindControl<Button>("StopButton").Visibility != Visibility.Visible)
                                 throw new Exception("Navigation during reception lost the stop control or unlocked pairing changes.");
-                            ((RadioButton)window.FindName("ConnectNav")).IsChecked = true;
+                            ((NavigationView)window.Content).SelectedItem = window.FindControl<NavigationViewItem>("ConnectNav");
                         }
                     }
                 }
                 Task completed = window.SessionCompletion;
+                Task? closed = null;
                 if (stage is "peer-close" or "unexpected-close") client.Dispose();
                 else if (stage == "phone-stop") await peer!.WriteAsync(new[] { (byte)SessionControl.Disconnect }, timeout.Token);
                 else if (stage == "truncated-frame")
@@ -90,12 +93,12 @@ internal static class DisconnectCheck
                     await peer!.WriteAsync("LM"u8.ToArray(), timeout.Token);
                     client.Client.Shutdown(SocketShutdown.Send);
                 }
-                else if (stage == "window-close") window.Close();
+                else if (stage == "window-close") closed = NativeWindowCheck.RequestCloseAsync(window);
                 else
                 {
-                    var stop = (Button)window.FindName("StopButton");
-                    stop.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
-                    stop.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                    var stop = window.FindControl<Button>("StopButton");
+                    NativeWindowCheck.Invoke(stop);
+                    NativeWindowCheck.Invoke(stop);
                     if (stage == "desktop-stop")
                     {
                         var signal = new byte[1];
@@ -106,8 +109,8 @@ internal static class DisconnectCheck
                 }
                 try { await completed.WaitAsync(TimeSpan.FromSeconds(5)); }
                 catch (Exception) when (completed.IsCompleted) { /* The UI handler owns the expected cancellation/network exception. */ }
-                await window.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-                string finalStatus = ((TextBlock)window.FindName("StatusText")).Text;
+                if (closed is not null) await closed.WaitAsync(TimeSpan.FromSeconds(5));
+                string finalStatus = status.Text;
                 if ((stage is "peer-close" or "phone-stop" or "desktop-stop") && finalStatus != "已断开连接。")
                     throw new Exception("Graceful close was shown as: " + finalStatus);
                 if ((stage is "unexpected-close" or "truncated-frame") && !finalStatus.StartsWith("连接结束："))
@@ -127,16 +130,19 @@ internal static class DisconnectCheck
             if (!VirtualMicOutput.Exists())
             {
                 var window = new MainWindow();
-                ((RadioButton)window.FindName("WifiMode")).IsChecked = true;
-                var outputs = (ComboBox)window.FindName("Outputs");
+                window.Activate();
+                await App.WaitForLayoutAsync(window);
+                window.FindControl<RadioButton>("WifiMode").IsChecked = true;
+                var outputs = window.FindControl<ComboBox>("Outputs");
                 // Uninstalled experimental drivers are hidden in the normal device list.
                 outputs.ItemsSource = new[] { new OutputDevice("Missing experimental driver", 0, Driver: true) };
                 outputs.SelectedIndex = 0;
-                ((Button)window.FindName("StartButton")).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                NativeWindowCheck.Invoke(window.FindControl<Button>("StartButton"));
+                await App.WaitForLayoutAsync(window);
                 Task completed = window.SessionCompletion;
                 try { await completed.WaitAsync(TimeSpan.FromSeconds(5)); } catch (Exception) when (completed.IsCompleted) { }
-                await window.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-                if (window.SessionActive || !((TextBlock)window.FindName("StatusText")).Text.Contains("无法打开 LinkMic") || unhandled.Count != 0)
+                await App.WaitForLayoutAsync(window);
+                if (window.SessionActive || !window.FindControl<TextBlock>("StatusText").Text.Contains("无法打开 LinkMic") || unhandled.Count != 0)
                     throw new Exception("Missing-driver startup did not report a recoverable UI error.");
                 window.Close();
                 results.Add(new { stage = "missing-driver-startup", passed = true });
@@ -144,10 +150,10 @@ internal static class DisconnectCheck
             await File.WriteAllTextAsync(Path.Combine(directory, "ui-disconnect-results.json"), JsonSerializer.Serialize(new
             {
                 passed = true, cases = results, unhandledDispatcherExceptions = unhandled.Count,
-                physicalBluetooth = false, actualWpfButtons = true, actualReceiver = true, hardwareAudioSink = false
+                physicalBluetooth = false, actualWinUiButtons = true, actualReceiver = true, hardwareAudioSink = false
             }, new JsonSerializerOptions { WriteIndented = true }));
         }
-        finally { Application.Current.DispatcherUnhandledException -= CaptureError; }
+        finally { app.UnhandledException -= CaptureError; }
     }
     private sealed class CountingOutput : IAudioOutput
     {

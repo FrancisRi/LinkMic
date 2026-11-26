@@ -1,49 +1,62 @@
-using System.ComponentModel;
-using System.Windows;
-using Microsoft.Win32;
+using Microsoft.UI.Windowing;
+using Microsoft.UI.Xaml;
+using Windows.UI.ViewManagement;
 
 namespace LinkMic.Windows;
 
-// Native Fluent resources own materials, contrast themes and system accent colors.
-public sealed class ThemeController : IDisposable
+public sealed class ThemeController
 {
-    private readonly Window window;
+    private readonly FrameworkElement root;
+    private readonly AppWindowTitleBar titleBar;
+    private readonly AccessibilitySettings accessibility = new();
     private readonly string settingsPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LinkMic", "theme.txt");
+
     public string Preference { get; private set; } = "System";
-    public string EffectiveMode { get; private set; } = "Light";
-    public ThemeController(Window window)
+    public bool HighContrast => accessibility.HighContrast;
+    public string EffectiveMode => HighContrast ? "HighContrast" : root.ActualTheme.ToString();
+
+    public ThemeController(FrameworkElement root, AppWindowTitleBar titleBar)
     {
-        this.window = window;
+        this.root = root;
+        this.titleBar = titleBar;
         try { if (File.Exists(settingsPath)) Preference = Normalize(File.ReadAllText(settingsPath).Trim()); }
-        catch (IOException) { } catch (UnauthorizedAccessException) { }
-        SystemEvents.UserPreferenceChanged += OnSystemPreference;
-        SystemParameters.StaticPropertyChanged += OnSystemParameters;
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
         Apply();
     }
+
     public void SetPreference(string preference, bool persist = true)
     {
-        Preference = Normalize(preference); Apply();
+        Preference = Normalize(preference);
+        Apply();
         if (!persist) return;
-        try { Directory.CreateDirectory(Path.GetDirectoryName(settingsPath)!); File.WriteAllText(settingsPath, Preference); }
-        catch (IOException) { } catch (UnauthorizedAccessException) { }
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(settingsPath)!);
+            File.WriteAllText(settingsPath, Preference);
+        }
+        catch (IOException) { }
+        catch (UnauthorizedAccessException) { }
     }
+
     private static string Normalize(string value) => value is "Light" or "Dark" ? value : "System";
-    private void OnSystemPreference(object sender, UserPreferenceChangedEventArgs e) => Refresh();
-    private void OnSystemParameters(object? sender, PropertyChangedEventArgs e) => Refresh();
-    private void Refresh() { if (!window.Dispatcher.HasShutdownStarted) window.Dispatcher.InvokeAsync(Apply); }
-    private static bool SystemIsDark()
-    {
-        try { using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"); return key?.GetValue("AppsUseLightTheme") is int value && value == 0; }
-        catch (System.Security.SecurityException) { return false; }
-    }
+
     private void Apply()
     {
-        bool dark = Preference == "Dark" || Preference == "System" && SystemIsDark();
-        EffectiveMode = SystemParameters.HighContrast ? "HighContrast" : dark ? "Dark" : "Light";
-#pragma warning disable WPF0001 // Isolate WPF's experimental code-access opt-in.
-        Application.Current.ThemeMode = Preference == "Dark" ? ThemeMode.Dark : Preference == "Light" ? ThemeMode.Light : ThemeMode.System;
-        window.ThemeMode = Application.Current.ThemeMode;
-#pragma warning restore WPF0001
+        root.RequestedTheme = Preference switch
+        {
+            "Dark" => ElementTheme.Dark,
+            "Light" => ElementTheme.Light,
+            _ => ElementTheme.Default
+        };
+        if (AppWindowTitleBar.IsCustomizationSupported())
+        {
+            titleBar.PreferredTheme = Preference switch
+            {
+                "Dark" => TitleBarTheme.Dark,
+                "Light" => TitleBarTheme.Light,
+                _ => TitleBarTheme.UseDefaultAppMode
+            };
+        }
     }
-    public void Dispose() { SystemEvents.UserPreferenceChanged -= OnSystemPreference; SystemParameters.StaticPropertyChanged -= OnSystemParameters; }
 }

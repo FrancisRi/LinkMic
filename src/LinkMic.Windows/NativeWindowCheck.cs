@@ -1,108 +1,143 @@
 using System.Runtime.InteropServices;
 using System.Text.Json;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Interop;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Threading;
+using Microsoft.UI.Composition.SystemBackdrops;
+using Microsoft.UI.Windowing;
+using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Automation.Peers;
+using Microsoft.UI.Xaml.Automation.Provider;
+using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
+using Windows.Foundation;
+using Windows.Graphics;
 
 namespace LinkMic.Windows;
+
 internal static class NativeWindowCheck
 {
-    [StructLayout(LayoutKind.Sequential)] private struct Rect { public int Left, Top, Right, Bottom; }
+    [StructLayout(LayoutKind.Sequential)]
+    private struct WindowRect { public int Left, Top, Right, Bottom; }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct BitmapInfo
+    {
+        public uint Size;
+        public int Width, Height;
+        public ushort Planes, BitCount;
+        public uint Compression, SizeImage;
+        public int XPelsPerMeter, YPelsPerMeter;
+        public uint ColorsUsed, ColorsImportant;
+    }
+
     [DllImport("dwmapi.dll")] private static extern int DwmGetWindowAttribute(IntPtr hwnd, int attribute, out int value, int size);
     [DllImport("dwmapi.dll")] private static extern int DwmFlush();
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] private static extern IntPtr GetWindowLongPtr(IntPtr hwnd, int index);
-    [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hwnd, out Rect bounds);
+    [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hwnd, out WindowRect bounds);
     [DllImport("user32.dll")] private static extern IntPtr GetWindowDC(IntPtr hwnd);
     [DllImport("user32.dll")] private static extern int ReleaseDC(IntPtr hwnd, IntPtr dc);
     [DllImport("user32.dll")] private static extern bool PrintWindow(IntPtr hwnd, IntPtr dc, uint flags);
+    [DllImport("user32.dll", EntryPoint = "PostMessageW")] private static extern bool PostMessage(IntPtr hwnd, uint message, IntPtr wParam, IntPtr lParam);
     [DllImport("gdi32.dll")] private static extern IntPtr CreateCompatibleDC(IntPtr dc);
     [DllImport("gdi32.dll")] private static extern IntPtr CreateCompatibleBitmap(IntPtr dc, int width, int height);
     [DllImport("gdi32.dll")] private static extern IntPtr SelectObject(IntPtr dc, IntPtr value);
     [DllImport("gdi32.dll")] private static extern bool DeleteObject(IntPtr value);
     [DllImport("gdi32.dll")] private static extern bool DeleteDC(IntPtr dc);
+    [DllImport("gdi32.dll")] private static extern int GetDIBits(IntPtr dc, IntPtr bitmap, uint first, uint count, [Out] byte[] buffer, ref BitmapInfo info, uint usage);
+
+    internal static void Invoke(Button button)
+    {
+        var peer = FrameworkElementAutomationPeer.CreatePeerForElement(button);
+        ((IInvokeProvider)peer.GetPattern(PatternInterface.Invoke)).Invoke();
+    }
+
+    internal static Task RequestCloseAsync(MainWindow window)
+    {
+        var closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        window.Closed += (_, _) => closed.TrySetResult();
+        const uint wmClose = 0x0010;
+        if (!PostMessage(window.Handle, wmClose, IntPtr.Zero, IntPtr.Zero))
+            throw new Exception("Could not request a native window close.");
+        return closed.Task;
+    }
 
     public static async Task RunAsync(MainWindow window, string directory)
     {
         var frames = new List<object>();
-        var hwnd = new WindowInteropHelper(window).EnsureHandle();
+        var hwnd = window.Handle;
+        var appWindow = window.AppWindow;
+        var presenter = (OverlappedPresenter)appWindow.Presenter;
+        var originalSize = appWindow.Size;
         long style = GetWindowLongPtr(hwnd, -16).ToInt64();
-        const long expected = 0x00C00000 | 0x00040000 | 0x00010000 | 0x00020000;
-        if ((style & expected) != expected || window.AllowsTransparency || window.WindowStyle != WindowStyle.SingleBorderWindow)
+        const long nativeFrame = 0x00C00000 | 0x00040000 | 0x00010000 | 0x00020000 | 0x00080000;
+        bool layered = (GetWindowLongPtr(hwnd, -20).ToInt64() & 0x00080000) != 0;
+        if ((style & nativeFrame) != nativeFrame || layered || !presenter.HasTitleBar || window.ExtendsContentIntoTitleBar)
             throw new Exception("Native caption, resizing, minimize/maximize buttons or composition were lost.");
-        window.ShowActivated = false;
-        window.Show();
-        try
+        if (window.SystemBackdrop is not MicaBackdrop)
+            throw new Exception("The main window has no WinUI Mica backdrop.");
+
+        foreach (string mode in new[] { "Light", "Dark" })
         {
-            foreach (string mode in new[] { "Light", "Dark" })
-            {
-                window.SetAppearance(mode, persist: false);
-                await WaitForCompositionAsync(window);
-                int backdropResult = DwmGetWindowAttribute(hwnd, 38, out int backdrop, sizeof(int));
-                int darkResult = DwmGetWindowAttribute(hwnd, 20, out int dark, sizeof(int));
-                if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22621) && !SystemParameters.HighContrast && (backdropResult != 0 || backdrop != 2))
-                    throw new Exception($"Native Mica was not configured: HRESULT={backdropResult}, backdrop={backdrop}.");
-                if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 22000) && !SystemParameters.HighContrast && (darkResult != 0 || dark != (mode == "Dark" ? 1 : 0)))
-                    throw new Exception($"Native caption theme did not follow {mode}.");
-                // Windows animates the Mica theme transition after its attributes
-                // have changed. Allow that system animation to settle for the image.
-                await Task.Delay(350);
-                await WaitForCompositionAsync(window);
-                bool captured = Capture(hwnd, Path.Combine(directory, $"windows11-{mode.ToLowerInvariant()}-window.png"));
-                frames.Add(new { mode, dwmBackdrop = backdrop, backdropHResult = backdropResult, nativeDarkCaption = dark, darkCaptionHResult = darkResult, nativeFrameCaptured = captured });
-            }
-            foreach (var (name, title) in new[] { ("SettingsNav", "设置"), ("GuideNav", "使用指南"), ("LogsNav", "运行日志"), ("ConnectNav", "连接与音频") })
-            {
-                ((RadioButton)window.FindName(name)).IsChecked = true;
-                await window.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-                if (((TextBlock)window.FindName("PageTitle")).Text != title || !((Button)window.FindName("StartButton")).IsVisible)
-                    throw new Exception("Navigation lost its heading or persistent session controls.");
-            }
-            window.WindowState = WindowState.Maximized;
-            await window.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-            if (window.WindowState != WindowState.Maximized) throw new Exception("Native maximization failed.");
-            window.WindowState = WindowState.Normal;
-            window.Width = 880; window.Height = 640;
+            window.SetAppearance(mode, persist: false);
             await WaitForCompositionAsync(window);
-            var start = (Button)window.FindName("StartButton");
-            var content = (FrameworkElement)window.Content;
-            var bounds = start.TransformToAncestor(content).TransformBounds(new System.Windows.Rect(start.RenderSize));
-            if (bounds.Bottom > content.ActualHeight || bounds.Right > content.ActualWidth || !start.IsVisible)
-                throw new Exception("Session controls are clipped at the minimum window size.");
-            Capture(hwnd, Path.Combine(directory, "windows11-compact-window.png"));
-            window.Width = 1080; window.Height = 800;
-            window.SetAppearance("System", persist: false);
-            await File.WriteAllTextAsync(Path.Combine(directory, "native-window-results.json"), JsonSerializer.Serialize(new
-            {
-                passed = true, nativeCaptionButtons = true, nativeResizeFrame = true, layeredTransparency = false,
-                maximizeRestorePassed = true, minimumSizeControlsVisible = true, navigationPassed = true, frames,
-            snapFlyoutManuallyTested = false, physicalMonitorDpiSwitchTested = false,
-                highContrastPhysicallyTested = SystemParameters.HighContrast,
-                note = "DWM attributes verify configuration; PrintWindow may use a neutral backdrop and does not prove wallpaper tint or Snap flyout rendering."
-            }, new JsonSerializerOptions { WriteIndented = true }));
+            int darkResult = DwmGetWindowAttribute(hwnd, 20, out int dark, sizeof(int));
+            if (AppWindowTitleBar.IsCustomizationSupported() && !window.Theme.HighContrast
+                && (darkResult != 0 || dark != (mode == "Dark" ? 1 : 0)))
+                throw new Exception($"Native caption theme did not follow {mode}.");
+            bool captured = await CaptureAsync(hwnd, Path.Combine(directory, $"windows11-{mode.ToLowerInvariant()}-window.png"));
+            frames.Add(new { mode, nativeDarkCaption = dark, darkCaptionHResult = darkResult, nativeFrameCaptured = captured });
         }
-        finally { window.Hide(); }
+
+        var navigation = (NavigationView)window.Content;
+        var start = window.FindControl<Button>("StartButton");
+        foreach (var (name, title) in new[] { ("SettingsNav", "设置"), ("GuideNav", "使用指南"), ("LogsNav", "运行日志"), ("ConnectNav", "连接与音频") })
+        {
+            navigation.SelectedItem = window.FindControl<NavigationViewItem>(name);
+            await App.WaitForLayoutAsync(window);
+            if (window.FindControl<TextBlock>("PageTitle").Text != title || start.Visibility != Visibility.Visible)
+                throw new Exception("Navigation lost its heading or persistent session controls.");
+        }
+
+        presenter.Maximize();
+        await App.WaitForLayoutAsync(window);
+        if (presenter.State != OverlappedPresenterState.Maximized) throw new Exception("Native maximization failed.");
+        presenter.Restore();
+        if (presenter.State != OverlappedPresenterState.Restored) throw new Exception("Native restore failed.");
+        presenter.Minimize();
+        await App.WaitForLayoutAsync(window);
+        if (presenter.State != OverlappedPresenterState.Minimized) throw new Exception("Native minimization failed.");
+        presenter.Restore();
+        await App.WaitForLayoutAsync(window);
+        if (presenter.State != OverlappedPresenterState.Restored) throw new Exception("Native restore failed after minimizing.");
+
+        if (presenter.PreferredMinimumWidth is not int minWidth || presenter.PreferredMinimumHeight is not int minHeight)
+            throw new Exception("Native window minimum size is missing.");
+        appWindow.Resize(new SizeInt32(minWidth, minHeight));
+        await WaitForCompositionAsync(window);
+        var bounds = start.TransformToVisual(navigation).TransformBounds(new Rect(0, 0, start.ActualWidth, start.ActualHeight));
+        if (bounds.Bottom > navigation.ActualHeight || bounds.Right > navigation.ActualWidth || start.ActualHeight == 0 || start.Visibility != Visibility.Visible)
+            throw new Exception("Session controls are clipped at the minimum window size.");
+        await CaptureAsync(hwnd, Path.Combine(directory, "windows11-compact-window.png"));
+        appWindow.Resize(originalSize);
+        window.SetAppearance("System", persist: false);
+        await File.WriteAllTextAsync(Path.Combine(directory, "native-window-results.json"), JsonSerializer.Serialize(new
+        {
+            passed = true, nativeCaptionButtons = true, nativeResizeFrame = true, layeredTransparency = layered,
+            micaConfigured = true, micaSupported = MicaController.IsSupported(),
+            maximizeRestorePassed = true, minimizeRestorePassed = true, minimumSizeControlsVisible = true, navigationPassed = true, frames,
+            snapFlyoutManuallyTested = false, physicalMonitorDpiSwitchTested = false,
+            highContrastPhysicallyTested = window.Theme.HighContrast,
+            note = "WinUI sets the system backdrop through composition. PrintWindow may omit the wallpaper tint."
+        }, new JsonSerializerOptions { WriteIndented = true }));
     }
+
     private static async Task WaitForCompositionAsync(Window window)
     {
-        // Dispatcher-idle alone does not wait for WPF's render thread or DWM.
-        // Wait for render frames so captures cannot contain the previous theme.
-        var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        int frames = 0;
-        void Rendered(object? sender, EventArgs args) { if (++frames >= 3) ready.TrySetResult(); }
-        CompositionTarget.Rendering += Rendered;
-        try
-        {
-            window.UpdateLayout(); window.InvalidateVisual();
-            await ready.Task.WaitAsync(TimeSpan.FromSeconds(3));
-            await window.Dispatcher.InvokeAsync(() => { }, DispatcherPriority.ApplicationIdle);
-            DwmFlush();
-        }
-        finally { CompositionTarget.Rendering -= Rendered; }
+        await App.WaitForLayoutAsync(window);
+        // Allow the native window theme and backdrop animations to settle before capturing.
+        await Task.Delay(350);
+        DwmFlush();
     }
-    private static bool Capture(IntPtr hwnd, string path)
+
+    private static async Task<bool> CaptureAsync(IntPtr hwnd, string path)
     {
         if (!GetWindowRect(hwnd, out var rect)) return false;
         int width = rect.Right - rect.Left, height = rect.Bottom - rect.Top;
@@ -110,13 +145,25 @@ internal static class NativeWindowCheck
         try
         {
             if (screen == IntPtr.Zero) return false;
-            memory = CreateCompatibleDC(screen); bitmap = CreateCompatibleBitmap(screen, width, height);
+            memory = CreateCompatibleDC(screen);
+            bitmap = CreateCompatibleBitmap(screen, width, height);
             if (memory == IntPtr.Zero || bitmap == IntPtr.Zero) return false;
             previous = SelectObject(memory, bitmap);
             if (!PrintWindow(hwnd, memory, 2)) return false;
-            var source = Imaging.CreateBitmapSourceFromHBitmap(bitmap, IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
-            var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(source));
-            using var file = File.Create(path); encoder.Save(file); return true;
+            SelectObject(memory, previous);
+            previous = IntPtr.Zero;
+            var info = new BitmapInfo
+            {
+                Size = (uint)Marshal.SizeOf<BitmapInfo>(),
+                Width = width,
+                Height = -height,
+                Planes = 1,
+                BitCount = 32
+            };
+            byte[] pixels = new byte[checked(width * height * 4)];
+            if (GetDIBits(screen, bitmap, 0, (uint)height, pixels, ref info, 0) != height) return false;
+            await App.SavePngAsync(path, pixels, width, height);
+            return true;
         }
         finally
         {

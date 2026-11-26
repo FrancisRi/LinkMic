@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.3.5 — 2026-11-26
+
+Windows **0.3.5**, Android **0.2.4**.
+
+- Windows now uses WinUI 3 with Mica, native navigation, and the Windows system title bar. The title bar follows the selected light, dark, or system theme.
+- Start and Disconnect remain accessible while navigating or scrolling. The Windows checks cover native window controls and closing during reception.
+- The Windows x64 ZIP includes the Windows App SDK runtime. Extract all files and run `LinkMic.exe`. This release reuses the Android 0.2.4 APK.
+
 ## v0.3.4 — 2026-11-06
 
 Windows **0.3.4**, Android **0.2.4**.

@@ -4,7 +4,7 @@ $artifacts=Join-Path $ProjectRoot 'artifacts'
 New-Item -ItemType Directory -Force -Path $artifacts | Out-Null
 if ($Target -in 'All','Windows') {
     if(!(Test-Path -LiteralPath "$ProjectRoot\native\win-x64\rnnoise.dll")){ & "$PSScriptRoot\build-rnnoise.ps1" }
-    & $Dotnet publish "$ProjectRoot\src\LinkMic.Windows\LinkMic.Windows.csproj" -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o "$artifacts\windows"
+    & $Dotnet publish "$ProjectRoot\src\LinkMic.Windows\LinkMic.Windows.csproj" -c Release --self-contained true -p:DebugType=None -o "$artifacts\windows-winui"
     if ($LASTEXITCODE -ne 0) { throw 'Windows publish failed' }
 }
 if ($Target -in 'All','Android') {

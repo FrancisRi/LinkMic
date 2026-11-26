@@ -2,9 +2,9 @@
 
 LinkMic's original application code is MIT-licensed; see the root `LICENSE`. Third-party components and the experimental driver keep the licenses described below. The Gradle wrapper uses Apache-2.0, copyright the Gradle authors; the complete license is in `docs/licenses/Apache-2.0.txt`, source: https://github.com/gradle/gradle/tree/v8.13.0/gradle/wrapper .
 
-LinkMic's Windows self-contained build includes the .NET 10.0.13 runtime and Windows Desktop/WPF runtime. Their original license and notice files are copied into the distribution's `licenses` directory. The SDK, JDK, Gradle, Android SDK and REA are development tools and are not included in the product archive.
+LinkMic's self-contained Windows build includes the .NET 10.0.13 runtime and the Windows App SDK 1.8.260921001 runtime for WinUI 3. Their original license and notice files are in the distribution's `licenses` directory.
 
-NuGet dependencies bundled in the Windows executable:
+NuGet dependencies included in the Windows distribution:
 
 | Component | Version | License / copyright |
 | --- | --- | --- |
