@@ -32,7 +32,7 @@
       <NavigationViewItem x:Name="SettingsNav" Content="设置" Icon="Setting"/>
     </NavigationView.FooterMenuItems>
     <NavigationView.PaneFooter>
-      <TextBlock Text="LinkMic 0.3.5" Style="{StaticResource Label}" FontSize="12" Margin="16,14,0,12"/>
+      <TextBlock Text="LinkMic 0.3.6" Style="{StaticResource Label}" FontSize="12" Margin="16,14,0,12"/>
     </NavigationView.PaneFooter>
     <NavigationView.Content>
       <Grid>
@@ -97,7 +97,7 @@
             <StackPanel x:Name="SettingsPage" Visibility="Collapsed">
               <Border Style="{StaticResource Card}"><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="200"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="应用主题" Style="{StaticResource SectionTitle}"/><TextBlock Text="选择浅色、深色，或跟随 Windows" Style="{StaticResource Label}" FontSize="12" Margin="0,6,12,0"/></StackPanel><ComboBox x:Name="ThemeChoice" HorizontalAlignment="Stretch" Grid.Column="1" SelectionChanged="ThemeChanged" VerticalAlignment="Center" AutomationProperties.Name="界面主题"><ComboBoxItem Content="跟随 Windows" Tag="System"/><ComboBoxItem Content="浅色" Tag="Light"/><ComboBoxItem Content="深色" Tag="Dark"/></ComboBox></Grid></Border>
               <Border Style="{StaticResource Card}" Margin="0,12,0,0"><StackPanel><TextBlock Text="已配对设备" Style="{StaticResource SectionTitle}"/><TextBlock x:Name="PairedDevicesInfo" Style="{StaticResource Label}" Margin="0,10,0,12"/><Button x:Name="ForgetDevicesButton" Content="忘记已配对设备" Click="ForgetDevices"/></StackPanel></Border>
-              <Border Style="{StaticResource Card}" Margin="0,12,0,0"><StackPanel><TextBlock Text="关于 LinkMic" Style="{StaticResource SectionTitle}"/><TextBlock Text="Windows 0.3.5 · Android 0.2.4" Margin="0,12,0,6"/><TextBlock Text="通过蓝牙或 Wi-Fi，把手机的麦克风连接到电脑。" Style="{StaticResource Label}"/><TextBlock Text="VB-CABLE 由 VB-Audio 提供，是 donationware。欢迎支持原作者：vb-audio.com/Cable/ · shop.vb-audio.com。" Style="{StaticResource Label}" FontSize="12" Margin="0,10,0,0"/></StackPanel></Border>
+              <Border Style="{StaticResource Card}" Margin="0,12,0,0"><StackPanel><TextBlock Text="关于 LinkMic" Style="{StaticResource SectionTitle}"/><TextBlock Text="Windows 0.3.6 · Android 0.2.4" Margin="0,12,0,6"/><TextBlock Text="通过蓝牙或 Wi-Fi，把手机的麦克风连接到电脑。" Style="{StaticResource Label}"/><TextBlock Text="VB-CABLE 由 VB-Audio 提供，是 donationware。欢迎支持原作者：vb-audio.com/Cable/ · shop.vb-audio.com。" Style="{StaticResource Label}" FontSize="12" Margin="0,10,0,0"/></StackPanel></Border>
             </StackPanel>
           </Grid>
         </ScrollViewer>

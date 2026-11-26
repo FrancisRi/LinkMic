@@ -31,7 +31,7 @@ if(Test-Path -LiteralPath $vendorZip){
         [IO.Compression.ZipFileExtensions]::ExtractToFile($notice,"$cable\VB-CABLE-original-readme.txt",$true)
     }finally{$archive.Dispose()}
 }
-$zip=Join-Path $artifacts 'LinkMic-Windows-0.3.5-win-x64.zip'
+$zip=Join-Path $artifacts 'LinkMic-Windows-0.3.6-win-x64.zip'
 $files=@(Get-ChildItem -LiteralPath $windows | Select-Object -ExpandProperty FullName)
 Compress-Archive -LiteralPath $files -DestinationPath $zip -Force
 $checksumFiles=@($zip)

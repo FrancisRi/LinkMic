@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.6 — 2026-11-26
+
+Windows **0.3.6**, Android **0.2.4**.
+
+- Streamlined the project and driver documentation. The Windows ZIP includes the revised notices.
+
 ## v0.3.5 — 2026-11-26
 
 Windows **0.3.5**, Android **0.2.4**.

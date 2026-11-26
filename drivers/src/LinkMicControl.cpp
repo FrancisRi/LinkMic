@@ -1,4 +1,4 @@
-// LinkMic original PCM injection device; no WO Mic code or binaries.
+// LinkMic PCM injection device.
 #ifndef LINKMIC_CONTROL_HOST_TEST
 #include <ntddk.h>
 #include <wdmsec.h>

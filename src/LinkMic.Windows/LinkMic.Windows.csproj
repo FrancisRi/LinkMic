@@ -12,7 +12,7 @@
     <AssemblyName>LinkMic</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>assets/LinkMic.ico</ApplicationIcon>
-    <Version>0.3.5</Version>
+    <Version>0.3.6</Version>
   </PropertyGroup>
   <ItemGroup>
     <Content Include="assets\LinkMic.ico;assets\LinkMic.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"/>

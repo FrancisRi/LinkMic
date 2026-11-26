@@ -10,7 +10,7 @@ Use your Android phone as a Windows microphone over **Bluetooth or Wi-Fi**. The 
 
 ## 下载与使用
 
-从 [最新正式 Release](https://github.com/FrancisRi/LinkMic/releases/latest) 下载 Windows **0.3.5** 和 Android **0.2.4**。Android APK 继续使用原开发签名，可覆盖安装之前同签名版本。[版本记录](CHANGELOG.md)。
+从 [最新正式 Release](https://github.com/FrancisRi/LinkMic/releases/latest) 下载 Windows **0.3.6** 和 Android **0.2.4**。Android APK 继续使用原开发签名，可覆盖安装之前同签名版本。[版本记录](CHANGELOG.md)。
 
 1. Windows：完整解压 ZIP，运行 `LinkMic.exe`，保留同目录的文件和子文件夹。
 2. Android：安装 APK，允许麦克风及所用连接方式的权限；从旧版升级请覆盖安装以保留配对。
@@ -71,4 +71,4 @@ See the [protocol](docs/PROTOCOL.md), [RNNoise](docs/RNNOISE.md), [remembered co
 
 LinkMic's original application code and documentation use the **[MIT License](LICENSE)**, copyright © 2026 FrancisRi.
 
-Third-party components retain their licenses: RNNoise uses its upstream BSD-style license; Android dependencies use Apache-2.0; the experimental Microsoft-sample-based driver uses [MS-PL](drivers/LICENSE). VB-CABLE is proprietary donationware and is not covered by MIT. See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). No WO Mic binary or decompiled code is included.
+Third-party components retain their licenses: RNNoise uses its upstream BSD-style license; Android dependencies use Apache-2.0; the experimental Microsoft-sample-based driver uses [MS-PL](drivers/LICENSE). VB-CABLE is proprietary donationware and is not covered by MIT. See [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

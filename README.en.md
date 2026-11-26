@@ -8,7 +8,7 @@ Use your Android phone as a Windows microphone over **Bluetooth or Wi-Fi**. The 
 
 ## Download and setup
 
-Download Windows **0.3.5** and Android **0.2.4** from the [latest release](https://github.com/FrancisRi/LinkMic/releases/latest). The Android APK retains the existing development signing certificate and can update an earlier installation signed with the same certificate. See the [changelog](CHANGELOG.md).
+Download Windows **0.3.6** and Android **0.2.4** from the [latest release](https://github.com/FrancisRi/LinkMic/releases/latest). The Android APK retains the existing development signing certificate and can update an earlier installation signed with the same certificate. See the [changelog](CHANGELOG.md).
 
 1. **Windows:** Extract the entire ZIP and run `LinkMic.exe`. Keep the extracted files and folders together.
 2. **Android:** Install the APK and grant microphone access and the permissions requested for your connection method. When upgrading, install over the existing app to retain paired computers.

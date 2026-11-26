@@ -42,7 +42,7 @@ RNNoise uses a BSD-style license. Copyright holders include Jean-Marc Valin, Ama
 
 ## External drivers
 
-No WO Mic executable, APK or driver is bundled. The application uses ordinary Windows audio playback APIs to route phone audio into an installed virtual audio cable, or explicitly selected monitor speakers. An installed experimental LinkMic capture driver remains optional.
+The application uses ordinary Windows audio playback APIs to route phone audio into an installed virtual audio cable, or explicitly selected monitor speakers. An installed experimental LinkMic capture driver remains optional.
 
 Windows 0.2.1 includes the **unmodified original** `VBCABLE_Driver_Pack45.zip` from VB-Audio / Vincent Burel under `drivers/vb-cable/`. VB-CABLE is proprietary donationware, not covered by LinkMic's source licenses. Origin: https://vb-audio.com/Cable/ and https://www.vb-cable.com/ . **VB-CABLE is donationware; donations and license purchases are welcome at https://shop.vb-audio.com/ .** Its original `readme.txt` license is preserved inside the original ZIP and also copied alongside it. The end user separately extracts and runs the vendor's setup; LinkMic does not silently install it, rename its endpoints or modify the signed files. Commercial/organizational distribution must follow the vendor's applicable licensing terms: https://vb-audio.com/Services/licensing.htm .
 

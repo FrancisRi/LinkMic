@@ -1,6 +1,6 @@
 # Current release and verification
 
-Windows **0.3.5**, Android **0.2.4**. First public source publication: 2026-10-19.
+Windows **0.3.6**, Android **0.2.4**. First public source publication: 2026-10-19.
 
 The tested v0.3.3 release was promoted from prerelease to a regular GitHub Release on 2026-10-19 and selected as Latest. It retains the same tagged application source, Windows ZIP, Android APK, signing certificate and checksums. Promotion changes release metadata and documentation, not the application binaries. Android still uses the existing development signing certificate.
 
